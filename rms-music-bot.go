@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/bot"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
-	"github.com/RacoonMediaServer/rms-music-bot/internal/db"
-	"github.com/RacoonMediaServer/rms-packages/pkg/service/servicemgr"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/service"
 	"github.com/urfave/cli/v2"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/logger"
@@ -20,7 +21,7 @@ func main() {
 
 	useDebug := false
 
-	service := micro.NewService(
+	microService := micro.NewService(
 		micro.Name(serviceName),
 		micro.Version(Version),
 		micro.Flags(
@@ -34,7 +35,7 @@ func main() {
 		),
 	)
 
-	service.Init(
+	microService.Init(
 		micro.Action(func(context *cli.Context) error {
 			configFile := fmt.Sprintf("/etc/rms/%s.json", serviceName)
 			if context.IsSet("config") {
@@ -48,19 +49,14 @@ func main() {
 		_ = logger.Init(logger.WithLevel(logger.DebugLevel))
 	}
 
-	_ = servicemgr.NewServiceFactory(service)
+	conf := config.Config()
 
-	_, err := db.Connect(config.Config().Database)
+	_, err := bot.New(conf.Bot.Token, service.New(connectivity.New(conf.Remote, microService)))
 	if err != nil {
-		logger.Fatalf("Connect to database failed: %s", err)
+		logger.Fatalf("Start bot failed: %s", err)
 	}
 
-	// регистрируем хендлеры
-	//if err := rms_bot.RegisterRmsBotHandler(service.Server(), bot); err != nil {
-	//	logger.Fatalf("Register service failed: %s", err)
-	//}
-
-	if err := service.Run(); err != nil {
+	if err := microService.Run(); err != nil {
 		logger.Fatalf("Run service failed: %s", err)
 	}
 }

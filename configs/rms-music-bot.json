@@ -5,5 +5,17 @@
     "user": "rms",
     "password": "qweasd123",
     "database": "rms"
+  },
+  "bot": {
+    "token": ""
+  },
+  "layout": {
+    "directory": ""
+  },
+  "remote": {
+    "scheme": "http",
+    "host": "127.0.0.1",
+    "port": 8081,
+    "path": "/media"
   }
 }

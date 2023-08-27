@@ -1,0 +1,6 @@
+{{ define "track" }}
+<b>Трек "{{ $.Artist}} - {{ $.Title }}"</b>
+
+<b>Исполнитель</b>: {{ $.Artist }}
+<b>Альбом</b>: {{ $.Album }}
+{{ end }}
