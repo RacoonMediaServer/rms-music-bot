@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/models"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
 	"go-micro.dev/v4/logger"
 	"text/template"
@@ -43,10 +44,10 @@ func (s searchCommand) formatArtist(r *models.SearchMusicResult, replyID int) me
 		s.l.Logf(logger.ErrorLevel, "execute template failed: %s", err)
 	}
 
-	downloadArgs := map[string]string{
-		"artist": r.Artist,
+	downloadArgs := command.DownloadArguments{
+		Artist: r.Artist,
 	}
-	uid := s.r.Add(downloadArgs, uidLifeTime)
+	uid := s.r.Add(&downloadArgs, uidLifeTime)
 
 	m := messaging.New(buf.String(), replyID)
 	m.SetPhotoURL(r.Picture)
@@ -61,11 +62,11 @@ func (s searchCommand) formatAlbum(r *models.SearchMusicResult, replyID int) mes
 		s.l.Logf(logger.ErrorLevel, "execute template failed: %s", err)
 	}
 
-	downloadArgs := map[string]string{
-		"artist": r.Artist,
-		"album":  r.Album,
+	downloadArgs := command.DownloadArguments{
+		Artist: r.Artist,
+		Album:  r.Album,
 	}
-	uid := s.r.Add(downloadArgs, uidLifeTime)
+	uid := s.r.Add(&downloadArgs, uidLifeTime)
 
 	m := messaging.New(buf.String(), replyID)
 	m.SetPhotoURL(r.Picture)
@@ -81,12 +82,12 @@ func (s searchCommand) formatTrack(r *models.SearchMusicResult, replyID int) mes
 		s.l.Logf(logger.ErrorLevel, "execute template failed: %s", err)
 	}
 
-	downloadArgs := map[string]string{
-		"artist": r.Artist,
-		"album":  r.Album,
-		"track":  *r.Title,
+	downloadArgs := command.DownloadArguments{
+		Artist: r.Artist,
+		Album:  r.Album,
+		Track:  *r.Title,
 	}
-	uid := s.r.Add(downloadArgs, uidLifeTime)
+	uid := s.r.Add(&downloadArgs, uidLifeTime)
 
 	m := messaging.New(buf.String(), replyID)
 	m.SetPhotoURL(r.Picture)

@@ -8,6 +8,7 @@ type Bot struct {
 
 type Layout struct {
 	Directory string
+	Downloads string
 }
 
 type Remote struct {

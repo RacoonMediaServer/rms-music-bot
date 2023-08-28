@@ -38,6 +38,6 @@ func (h helpCommand) Do(arguments command.Arguments, replyID int) []messaging.Ch
 	return messaging.NewSingleMessage(result, replyID)
 }
 
-func newHelpCommand(factory connectivity.Factory, l logger.Logger, r registry.Registry) command.Command {
+func newHelpCommand(factory connectivity.Interlayer, l logger.Logger, r registry.Registry) command.Command {
 	return &helpCommand{}
 }

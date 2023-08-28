@@ -5,10 +5,14 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/bot"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/downloader"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/service"
 	"github.com/urfave/cli/v2"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/logger"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var Version = "v0.0.0"
@@ -50,13 +54,21 @@ func main() {
 	}
 
 	conf := config.Config()
+	d := downloader.New(conf.Layout)
+	f := connectivity.New(conf.Remote, microService)
+	f.Downloader = d
 
-	_, err := bot.New(conf.Bot.Token, service.New(connectivity.New(conf.Remote, microService)))
+	_, err := bot.New(conf.Bot.Token, service.New(f))
 	if err != nil {
 		logger.Fatalf("Start bot failed: %s", err)
 	}
 
-	if err := microService.Run(); err != nil {
-		logger.Fatalf("Run service failed: %s", err)
+	if err = d.Start(); err != nil {
+		logger.Fatalf("Start downloader failed: %s", err)
 	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	<-c
+	d.Stop()
 }

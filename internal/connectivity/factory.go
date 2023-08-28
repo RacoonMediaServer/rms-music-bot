@@ -9,9 +9,14 @@ import (
 	"github.com/go-openapi/strfmt"
 )
 
-type Factory struct {
-	Services  servicemgr.ServiceFactory
-	Discovery DiscoveryServiceFactory
+type Interlayer struct {
+	Services   servicemgr.ServiceFactory
+	Discovery  DiscoveryServiceFactory
+	Downloader Downloader
+}
+
+type Downloader interface {
+	Download(content []byte) error
 }
 
 type DiscoveryServiceFactory interface {
@@ -22,8 +27,8 @@ type discoveryFactory struct {
 	remote config.Remote
 }
 
-func New(remote config.Remote, factory servicemgr.ClientFactory) Factory {
-	return Factory{
+func New(remote config.Remote, factory servicemgr.ClientFactory) Interlayer {
+	return Interlayer{
 		Services:  servicemgr.NewServiceFactory(factory),
 		Discovery: &discoveryFactory{remote: remote},
 	}

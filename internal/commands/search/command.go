@@ -7,12 +7,13 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/registry"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/utils"
 	"go-micro.dev/v4/logger"
 	"time"
 )
 
 type searchCommand struct {
-	f connectivity.Factory
+	f connectivity.Interlayer
 	l logger.Logger
 	r registry.Registry
 }
@@ -29,16 +30,12 @@ var Command command.Type = command.Type{
 	Factory: New,
 }
 
-func New(f connectivity.Factory, l logger.Logger, r registry.Registry) command.Command {
+func New(f connectivity.Interlayer, l logger.Logger, r registry.Registry) command.Command {
 	return searchCommand{
 		f: f,
 		l: l.Fields(map[string]interface{}{"command": "search"}),
 		r: r,
 	}
-}
-
-func toPointer[T any](s T) *T {
-	return &s
 }
 
 func (s searchCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
@@ -49,7 +46,7 @@ func (s searchCommand) Do(arguments command.Arguments, replyID int) []messaging.
 	defer cancel()
 
 	req := music.SearchMusicParams{
-		Limit:   toPointer(maxResult),
+		Limit:   utils.ToPointer(maxResult),
 		Q:       arguments.String(),
 		Context: ctx,
 	}

@@ -10,7 +10,8 @@
     "token": ""
   },
   "layout": {
-    "directory": ""
+    "directory": "fuse",
+    "downloads": "downloads"
   },
   "remote": {
     "scheme": "http",

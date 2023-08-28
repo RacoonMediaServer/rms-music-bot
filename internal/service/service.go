@@ -10,11 +10,11 @@ import (
 )
 
 type Service struct {
-	f connectivity.Factory
+	f connectivity.Interlayer
 	r registry.Registry
 }
 
-func New(f connectivity.Factory) *Service {
+func New(f connectivity.Interlayer) *Service {
 	return &Service{f: f, r: registry.New()}
 }
 

@@ -7,4 +7,4 @@ import (
 )
 
 // Factory can create Command of specified type. Factory knows all about specific command
-type Factory func(f connectivity.Factory, l logger.Logger, r registry.Registry) Command
+type Factory func(f connectivity.Interlayer, l logger.Logger, r registry.Registry) Command
