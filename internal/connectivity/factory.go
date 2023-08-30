@@ -16,7 +16,8 @@ type Interlayer struct {
 }
 
 type Downloader interface {
-	Download(content []byte) error
+	Download(content []byte) ([]string, error)
+	GetFile(path string) ([]byte, error)
 }
 
 type DiscoveryServiceFactory interface {

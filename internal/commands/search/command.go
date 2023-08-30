@@ -39,7 +39,7 @@ func New(f connectivity.Interlayer, l logger.Logger, r registry.Registry) comman
 }
 
 func (s searchCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
-	const token = ""
+	const token = "b6c308fd-6a7f-441f-b120-a8d6e24126d9"
 	cli, auth := s.f.Discovery.New(token)
 
 	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)

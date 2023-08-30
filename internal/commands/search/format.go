@@ -92,7 +92,6 @@ func (s searchCommand) formatTrack(r *models.SearchMusicResult, replyID int) mes
 	m := messaging.New(buf.String(), replyID)
 	m.SetPhotoURL(r.Picture)
 	m.SetKeyboardStyle(messaging.MessageKeyboard)
-	m.AddButton("Добавить трек", "/add "+uid)
-	m.AddButton("Слушать трек", "/play "+uid)
+	m.AddButton("Слушать трек", "/add "+uid)
 	return m
 }

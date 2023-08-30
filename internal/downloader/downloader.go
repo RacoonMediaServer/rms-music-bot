@@ -10,6 +10,8 @@ import (
 	torrentfs "github.com/anacrolix/torrent/fs"
 	"github.com/anacrolix/torrent/metainfo"
 	"go-micro.dev/v4/logger"
+	"os"
+	"path"
 	"sync"
 )
 
@@ -64,20 +66,20 @@ func (d *Downloader) serveFS(conn *fuse.Conn) {
 	}
 }
 
-func (d *Downloader) Download(content []byte) error {
+func (d *Downloader) Download(content []byte) ([]string, error) {
 	var spec *torrent.TorrentSpec
 	isMagnet := isMagnetLink(content)
 	if !isMagnet {
 		mi, err := metainfo.Load(bytes.NewReader(content))
 		if err != nil {
-			return err
+			return nil, err
 		}
 		spec = torrent.TorrentSpecFromMetaInfo(mi)
 	} else {
 		var err error
 		spec, err = torrent.TorrentSpecFromMagnetUri(string(content))
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -89,10 +91,20 @@ func (d *Downloader) Download(content []byte) error {
 	t, _ := d.cli.AddTorrentOpt(opts)
 	if err := t.MergeSpec(spec); err != nil {
 		t.Drop()
-		return nil
+		return nil, err
 	}
 
-	return nil
+	<-t.GotInfo()
+	files := t.Files()
+	result := make([]string, 0, len(files))
+	for _, f := range files {
+		result = append(result, f.Path())
+	}
+	return result, nil
+}
+
+func (d *Downloader) GetFile(filepath string) ([]byte, error) {
+	return os.ReadFile(path.Join(d.layout.Directory, filepath))
 }
 
 func (d *Downloader) Stop() {

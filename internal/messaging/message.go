@@ -25,6 +25,11 @@ type videoUploading struct {
 	rd       io.Reader
 }
 
+type audioUploading struct {
+	name string
+	rd   io.Reader
+}
+
 type photoUploading struct {
 	name     string
 	mimeType string
@@ -61,6 +66,13 @@ func (m *Message) UploadPhoto(name, mimeType string, image []byte) {
 		name:     name,
 		mimeType: mimeType,
 		image:    image,
+	}
+}
+
+func (m *Message) UploadAudio(name, mimeType string, audio []byte) {
+	m.attachment = &audioUploading{
+		name: name,
+		rd:   bytes.NewReader(audio),
 	}
 }
 
@@ -138,9 +150,23 @@ func (m *Message) Compose(chatID int64) tgbotapi.Chattable {
 			videoMessage.Caption = m.text
 			videoMessage.ParseMode = "HTML"
 			videoMessage.ReplyMarkup = keyboard
+			videoMessage.ReplyToMessageID = m.replyToMessageID
 
 			msg = videoMessage
 
+		case *audioUploading:
+			fileReader := tgbotapi.FileReader{
+				Name:   attach.name,
+				Size:   -1,
+				Reader: attach.rd,
+			}
+			audioMessage := tgbotapi.NewAudioUpload(chatID, fileReader)
+			audioMessage.Caption = m.text
+			audioMessage.ParseMode = "HTML"
+			audioMessage.ReplyMarkup = keyboard
+			audioMessage.ReplyToMessageID = m.replyToMessageID
+
+			msg = audioMessage
 		}
 	} else {
 		textMessage := tgbotapi.NewMessage(chatID, m.text)
