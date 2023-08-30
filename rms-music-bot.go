@@ -5,6 +5,7 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/bot"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/db"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/downloader"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/service"
 	"github.com/urfave/cli/v2"
@@ -54,21 +55,27 @@ func main() {
 	}
 
 	conf := config.Config()
-	d := downloader.New(conf.Layout)
-	f := connectivity.New(conf.Remote, microService)
-	f.Downloader = d
 
-	_, err := bot.New(conf.Bot.Token, service.New(f))
+	database, err := db.Connect(conf.Database)
+	if err != nil {
+		logger.Fatalf("Connect to database failed: %s", err)
+	}
+	dw := downloader.New(conf.Layout, database)
+	f := connectivity.New(conf.Remote, microService)
+	f.Downloader = dw
+
+	tgBot, err := bot.New(conf.Bot.Token, service.New(f))
 	if err != nil {
 		logger.Fatalf("Start bot failed: %s", err)
 	}
 
-	if err = d.Start(); err != nil {
+	if err = dw.Start(); err != nil {
 		logger.Fatalf("Start downloader failed: %s", err)
 	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	<-c
-	d.Stop()
+	tgBot.Stop()
+	dw.Stop()
 }

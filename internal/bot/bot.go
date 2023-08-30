@@ -82,3 +82,7 @@ func (bot *Bot) handleMessage(message *tgbotapi.Message) {
 		}
 	}
 }
+
+func (bot *Bot) Stop() {
+
+}

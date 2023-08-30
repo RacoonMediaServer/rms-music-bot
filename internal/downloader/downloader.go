@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/model"
 	"github.com/anacrolix/fuse"
 	fusefs "github.com/anacrolix/fuse/fs"
 	"github.com/anacrolix/torrent"
@@ -17,20 +18,26 @@ import (
 
 type Downloader struct {
 	layout config.Layout
+	db     Database
 	cli    *torrent.Client
 	l      logger.Logger
 	fs     *torrentfs.TorrentFS
 	wg     sync.WaitGroup
 }
 
-func New(layout config.Layout) *Downloader {
+func New(layout config.Layout, db Database) *Downloader {
 	return &Downloader{
 		layout: layout,
+		db:     db,
 		l:      logger.Fields(map[string]interface{}{"from": "downloader"}),
 	}
 }
 
 func (d *Downloader) Start() error {
+	torrents, err := d.db.LoadTorrents()
+	if err != nil {
+		return fmt.Errorf("load torrents failed: %w", err)
+	}
 	conn, err := fuse.Mount(d.layout.Directory)
 	if err != nil {
 		return fmt.Errorf("mount fuse dir failed: %w", err)
@@ -50,6 +57,13 @@ func (d *Downloader) Start() error {
 	d.wg.Add(1)
 	go d.serveFS(conn)
 
+	d.l.Log(logger.InfoLevel, "Loading stored torrents...")
+	for _, t := range torrents {
+		if _, err = d.registerTorrent(t.Content); err != nil {
+			d.l.Logf(logger.WarnLevel, "Load '%s' failed: %s", t.Title)
+		}
+	}
+	d.l.Log(logger.InfoLevel, "Ready")
 	return nil
 }
 
@@ -66,7 +80,7 @@ func (d *Downloader) serveFS(conn *fuse.Conn) {
 	}
 }
 
-func (d *Downloader) Download(content []byte) ([]string, error) {
+func (d *Downloader) registerTorrent(content []byte) (*torrent.Torrent, error) {
 	var spec *torrent.TorrentSpec
 	isMagnet := isMagnetLink(content)
 	if !isMagnet {
@@ -92,6 +106,23 @@ func (d *Downloader) Download(content []byte) ([]string, error) {
 	if err := t.MergeSpec(spec); err != nil {
 		t.Drop()
 		return nil, err
+	}
+	return t, nil
+}
+
+func (d *Downloader) Download(content []byte) ([]string, error) {
+	t, err := d.registerTorrent(content)
+	if err != nil {
+		return nil, err
+	}
+
+	rec := model.Torrent{
+		Title:   t.Name(),
+		Content: content,
+	}
+
+	if err = d.db.AddTorrent(&rec); err != nil {
+		d.l.Logf(logger.WarnLevel, "Add torrent to database failed: %s", err)
 	}
 
 	<-t.GotInfo()
