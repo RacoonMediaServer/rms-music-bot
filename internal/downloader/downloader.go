@@ -23,6 +23,9 @@ type Downloader struct {
 	l      logger.Logger
 	fs     *torrentfs.TorrentFS
 	wg     sync.WaitGroup
+
+	// TODO: сделать отдельный глобальный режим для обслуживания, лочка - плохо
+	mu sync.RWMutex
 }
 
 func New(layout config.Layout, db Database) *Downloader {
@@ -64,6 +67,7 @@ func (d *Downloader) Start() error {
 		}
 	}
 	d.l.Log(logger.InfoLevel, "Ready")
+
 	return nil
 }
 
@@ -81,6 +85,9 @@ func (d *Downloader) serveFS(conn *fuse.Conn) {
 }
 
 func (d *Downloader) registerTorrent(content []byte) (*torrent.Torrent, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
 	var spec *torrent.TorrentSpec
 	isMagnet := isMagnetLink(content)
 	if !isMagnet {
@@ -107,6 +114,7 @@ func (d *Downloader) registerTorrent(content []byte) (*torrent.Torrent, error) {
 		t.Drop()
 		return nil, err
 	}
+
 	return t, nil
 }
 
@@ -135,7 +143,40 @@ func (d *Downloader) Download(content []byte) ([]string, error) {
 }
 
 func (d *Downloader) GetFile(filepath string) ([]byte, error) {
+	d.mu.RLock()
+	defer d.mu.Unlock()
 	return os.ReadFile(path.Join(d.layout.Directory, filepath))
+}
+
+func (d *Downloader) Wipe() {
+	d.mu.Lock()
+
+	d.l.Logf(logger.InfoLevel, "Wiping...")
+
+	curTorrents := d.cli.Torrents()
+	for _, t := range curTorrents {
+		t.Drop()
+	}
+	files, err := os.ReadDir(d.layout.Downloads)
+	if err != nil {
+		d.l.Logf(logger.FatalLevel, "Get downloaded files failed: %s", err)
+	}
+	for _, f := range files {
+		_ = os.RemoveAll(path.Join(d.layout.Downloads, f.Name()))
+	}
+	d.mu.Unlock()
+
+	torrents, err := d.db.LoadTorrents()
+	if err != nil {
+		d.l.Logf(logger.FatalLevel, "Load torrents failed: %s", err)
+	}
+	for _, t := range torrents {
+		if _, err = d.registerTorrent(t.Content); err != nil {
+			d.l.Logf(logger.WarnLevel, "Load '%s' failed: %s", t.Title)
+		}
+	}
+
+	d.l.Logf(logger.InfoLevel, "Wipe successfully done")
 }
 
 func (d *Downloader) Stop() {

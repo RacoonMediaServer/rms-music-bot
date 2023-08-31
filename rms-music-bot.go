@@ -8,12 +8,14 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/db"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/downloader"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/service"
+	"github.com/go-co-op/gocron"
 	"github.com/urfave/cli/v2"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/logger"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 var Version = "v0.0.0"
@@ -72,6 +74,12 @@ func main() {
 	if err = dw.Start(); err != nil {
 		logger.Fatalf("Start downloader failed: %s", err)
 	}
+
+	// clean downloaded data every day at night
+	s := gocron.NewScheduler(time.Local)
+	_, _ = s.Every(1).Day().At("00:03").Do(func() {
+		dw.Wipe()
+	})
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
