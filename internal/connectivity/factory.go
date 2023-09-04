@@ -3,6 +3,7 @@ package connectivity
 import (
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/client"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/registry"
 	"github.com/RacoonMediaServer/rms-packages/pkg/service/servicemgr"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -13,6 +14,7 @@ type Interlayer struct {
 	Services   servicemgr.ServiceFactory
 	Discovery  DiscoveryServiceFactory
 	Downloader Downloader
+	Registry   registry.Registry
 }
 
 type Downloader interface {

@@ -76,6 +76,8 @@ github.com/RacoonMediaServer/rms-media-discovery v1.5.4 h1:zKtbdsPpcSIQRXqR217RW
 github.com/RacoonMediaServer/rms-media-discovery v1.5.4/go.mod h1:ZSoZGR7qJPfsj6ZXm8qZLY1KdYqP+AUjO2KQejGeGks=
 github.com/RacoonMediaServer/rms-media-discovery v1.5.5 h1:VQuO0VhY8OsOix6mPr6IaiSestdmQZRHm9HmImvc/Vg=
 github.com/RacoonMediaServer/rms-media-discovery v1.5.5/go.mod h1:ZSoZGR7qJPfsj6ZXm8qZLY1KdYqP+AUjO2KQejGeGks=
+github.com/RacoonMediaServer/rms-media-discovery v1.5.6 h1:hWnB/TECIm0Nfxy7s27QZpQQaGBJGHGY64YH/lpTl/g=
+github.com/RacoonMediaServer/rms-media-discovery v1.5.6/go.mod h1:ZSoZGR7qJPfsj6ZXm8qZLY1KdYqP+AUjO2KQejGeGks=
 github.com/RacoonMediaServer/rms-packages v1.10.1 h1:/dNPcuG3AG/ZFHnpDy6cqoiyIZAwAcd9KzwgOrmM4No=
 github.com/RacoonMediaServer/rms-packages v1.10.1/go.mod h1:WvLl0QLSz8rmeqBi3E+kPk+xxykb1SQEFsfVkv00iSI=
 github.com/RoaringBitmap/roaring v0.4.7/go.mod h1:8khRDP4HmeXns4xIj9oGrKSz7XTQiJx2zgh7AcNke4w=

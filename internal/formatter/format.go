@@ -1,4 +1,4 @@
-package search
+package formatter
 
 import (
 	"bytes"
@@ -22,32 +22,16 @@ func init() {
 	parsedTemplates = template.Must(template.ParseFS(templates, "templates/*.txt"))
 }
 
-func (s searchCommand) formatResult(r *models.SearchMusicResult, replyID int) messaging.ChatMessage {
-	if r.Type == nil {
-		return nil
-	}
-	switch *r.Type {
-	case "artist":
-		return s.formatArtist(r, replyID)
-	case "album":
-		return s.formatAlbum(r, replyID)
-	case "track":
-		return s.formatTrack(r, replyID)
-	default:
-		return nil
-	}
-}
-
-func (s searchCommand) formatArtist(r *models.SearchMusicResult, replyID int) messaging.ChatMessage {
+func (f formatter) formatArtist(r *models.SearchMusicResult, replyID int) messaging.ChatMessage {
 	var buf bytes.Buffer
 	if err := parsedTemplates.ExecuteTemplate(&buf, "artist", r); err != nil {
-		s.l.Logf(logger.ErrorLevel, "execute template failed: %s", err)
+		f.l.Logf(logger.ErrorLevel, "Execute formatter template failed: %s", err)
 	}
 
 	downloadArgs := command.DownloadArguments{
 		Artist: r.Artist,
 	}
-	uid := s.r.Add(&downloadArgs, uidLifeTime)
+	uid := f.r.Add(&downloadArgs, uidLifeTime)
 
 	m := messaging.New(buf.String(), replyID)
 	m.SetPhotoURL(r.Picture)
@@ -56,17 +40,17 @@ func (s searchCommand) formatArtist(r *models.SearchMusicResult, replyID int) me
 	return m
 }
 
-func (s searchCommand) formatAlbum(r *models.SearchMusicResult, replyID int) messaging.ChatMessage {
+func (f formatter) formatAlbum(r *models.SearchMusicResult, replyID int) messaging.ChatMessage {
 	var buf bytes.Buffer
 	if err := parsedTemplates.ExecuteTemplate(&buf, "album", r); err != nil {
-		s.l.Logf(logger.ErrorLevel, "execute template failed: %s", err)
+		f.l.Logf(logger.ErrorLevel, "Execute formatter template failed: %s", err)
 	}
 
 	downloadArgs := command.DownloadArguments{
 		Artist: r.Artist,
 		Album:  r.Album,
 	}
-	uid := s.r.Add(&downloadArgs, uidLifeTime)
+	uid := f.r.Add(&downloadArgs, uidLifeTime)
 
 	m := messaging.New(buf.String(), replyID)
 	m.SetPhotoURL(r.Picture)
@@ -76,10 +60,10 @@ func (s searchCommand) formatAlbum(r *models.SearchMusicResult, replyID int) mes
 	return m
 }
 
-func (s searchCommand) formatTrack(r *models.SearchMusicResult, replyID int) messaging.ChatMessage {
+func (f formatter) formatTrack(r *models.SearchMusicResult, replyID int) messaging.ChatMessage {
 	var buf bytes.Buffer
 	if err := parsedTemplates.ExecuteTemplate(&buf, "track", r); err != nil {
-		s.l.Logf(logger.ErrorLevel, "execute template failed: %s", err)
+		f.l.Logf(logger.ErrorLevel, "execute template failed: %s", err)
 	}
 
 	downloadArgs := command.DownloadArguments{
@@ -87,11 +71,30 @@ func (s searchCommand) formatTrack(r *models.SearchMusicResult, replyID int) mes
 		Album:  r.Album,
 		Track:  *r.Title,
 	}
-	uid := s.r.Add(&downloadArgs, uidLifeTime)
+	uid := f.r.Add(&downloadArgs, uidLifeTime)
 
 	m := messaging.New(buf.String(), replyID)
 	m.SetPhotoURL(r.Picture)
 	m.SetKeyboardStyle(messaging.MessageKeyboard)
-	m.AddButton("Слушать трек", "/add "+uid)
+	m.AddButton("Слушать трек", "/play "+uid)
 	return m
+}
+
+func (f formatter) FormatSearchMusicResult(r *models.SearchMusicResult, replyID int) messaging.ChatMessage {
+	if r.Type == nil {
+		f.l.Logf(logger.ErrorLevel, "unknown message type")
+		return nil
+	}
+
+	switch *r.Type {
+	case "artist":
+		return f.formatArtist(r, replyID)
+	case "album":
+		return f.formatAlbum(r, replyID)
+	case "track":
+		return f.formatTrack(r, replyID)
+	}
+
+	f.l.Logf(logger.ErrorLevel, "unknown message type")
+	return nil
 }

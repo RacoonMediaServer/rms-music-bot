@@ -16,6 +16,10 @@ type MusicSelector struct {
 }
 
 func (s MusicSelector) Select(list []*models.SearchTorrentsResult) *models.SearchTorrentsResult {
+	if len(list) == 0 {
+		return nil
+	}
+
 	funcs := []rankFunc{s.limitBySize, s.rankBySeeders, s.rankByFormat}
 	funcs = append(funcs, s.getRankByTextFunc()...)
 

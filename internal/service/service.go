@@ -5,17 +5,15 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/commands"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
-	"github.com/RacoonMediaServer/rms-music-bot/internal/registry"
 	"go-micro.dev/v4/logger"
 )
 
 type Service struct {
-	f connectivity.Interlayer
-	r registry.Registry
+	interlayer connectivity.Interlayer
 }
 
-func New(f connectivity.Interlayer) *Service {
-	return &Service{f: f, r: registry.New()}
+func New(interlayer connectivity.Interlayer) *Service {
+	return &Service{interlayer: interlayer}
 }
 
 func (s Service) HandleMessage(messageID, userID int, userName, text string) []messaging.ChatMessage {
@@ -23,7 +21,7 @@ func (s Service) HandleMessage(messageID, userID int, userName, text string) []m
 		text = "/search " + text
 	}
 	commandID, args := command.Parse(text)
-	cmd, err := commands.NewCommand(commandID, s.f, logger.DefaultLogger, s.r)
+	cmd, err := commands.NewCommand(commandID, s.interlayer, logger.DefaultLogger)
 	if err != nil {
 		logger.Warnf("cannot execute command '%s': %s", commandID, err)
 		return messaging.NewSingleMessage(command.SomethingWentWrong, messageID)

@@ -144,7 +144,7 @@ func (d *Downloader) Download(content []byte) ([]string, error) {
 
 func (d *Downloader) GetFile(filepath string) ([]byte, error) {
 	d.mu.RLock()
-	defer d.mu.Unlock()
+	defer d.mu.RUnlock()
 	return os.ReadFile(path.Join(d.layout.Directory, filepath))
 }
 

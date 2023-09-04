@@ -1,4 +1,4 @@
-package add
+package play
 
 import (
 	"bytes"
@@ -14,10 +14,12 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/utils"
 	"github.com/go-openapi/runtime"
 	"go-micro.dev/v4/logger"
+	"path"
+	"strings"
 	"time"
 )
 
-type addCommand struct {
+type playCommand struct {
 	interlayer connectivity.Interlayer
 	l          logger.Logger
 }
@@ -28,21 +30,21 @@ const (
 )
 
 var Command command.Type = command.Type{
-	ID:       "add",
-	Title:    "Добавление музыки",
-	Help:     "Добавляет музыку в библиотеку",
+	ID:       "play",
+	Title:    "Прослушать трек",
+	Help:     "",
 	Factory:  New,
 	Internal: true,
 }
 
 func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
-	return addCommand{
+	return playCommand{
 		interlayer: interlayer,
-		l:          l.Fields(map[string]interface{}{"command": "add"}),
+		l:          l.Fields(map[string]interface{}{"command": "play"}),
 	}
 }
 
-func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
+func (c playCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
 	if len(arguments) != 1 {
 		return messaging.NewSingleMessage(command.ParseArgumentsFailed, replyID)
 	}
@@ -54,52 +56,40 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 	}
 
 	q := args.Artist
-	if args.Album != "" {
-		q += " " + args.Album
-	}
-
-	allAlbums := args.Album == "" && args.Track == ""
 
 	const token = ""
 	cli, auth := c.interlayer.Discovery.New(token)
 	var variants []*models.SearchTorrentsResult
 	var err error
 
-	for len(variants) == 0 {
-		variants, err = c.searchTorrents(cli, auth, q, allAlbums)
-		if err != nil {
-			c.l.Logf(logger.ErrorLevel, "Search torrents failed: %s", err)
-			return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
-		}
-		if len(variants) == 0 {
-			if !allAlbums {
-				allAlbums = true
-				q = args.Artist
-			} else {
-				return messaging.NewSingleMessage(command.NothingFound, replyID)
-			}
-		}
+	variants, err = c.searchTorrents(cli, auth, q)
+	if err != nil {
+		c.l.Logf(logger.ErrorLevel, "Search torrents failed: %s", err)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
 	}
 
 	sel := selector.MusicSelector{
 		Query:               q,
-		Discography:         allAlbums,
+		Discography:         true,
 		MinSeedersThreshold: 10,
 		MaxSizeMB:           50 * 1024,
 		Format:              "mp3",
 	}
 	chosen := sel.Select(variants)
+	if chosen == nil {
+		return messaging.NewSingleMessage(command.NothingFound, replyID)
+	}
 
-	_, err = c.download(cli, auth, *chosen.Link)
+	files, err := c.download(cli, auth, *chosen.Link)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Enqueue downloading failed: %s", err)
 		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
 	}
 
-	return messaging.NewSingleMessage("Добавлено", replyID)
+	return c.play(args.Track, files, replyID)
 }
 
-func (c addCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthInfoWriter, q string, allAlbums bool) ([]*models.SearchTorrentsResult, error) {
+func (c playCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthInfoWriter, q string) ([]*models.SearchTorrentsResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
 	defer cancel()
 
@@ -108,7 +98,7 @@ func (c addCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthIn
 		Q:           q,
 		Strong:      utils.ToPointer(false),
 		Type:        utils.ToPointer("music"),
-		Discography: utils.ToPointer(allAlbums),
+		Discography: utils.ToPointer(true),
 		Context:     ctx,
 	}
 
@@ -119,7 +109,7 @@ func (c addCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthIn
 	return resp.Payload.Results, nil
 }
 
-func (c addCommand) download(cli *client.Client, auth runtime.ClientAuthInfoWriter, link string) ([]string, error) {
+func (c playCommand) download(cli *client.Client, auth runtime.ClientAuthInfoWriter, link string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
 	defer cancel()
 
@@ -135,4 +125,22 @@ func (c addCommand) download(cli *client.Client, auth runtime.ClientAuthInfoWrit
 	}
 
 	return c.interlayer.Downloader.Download(buf.Bytes())
+}
+
+func (c playCommand) play(track string, files []string, replyID int) []messaging.ChatMessage {
+	track = strings.ToLower(track)
+	for _, f := range files {
+		_, name := path.Split(f)
+		if strings.Index(strings.ToLower(name), track) >= 0 {
+			file, err := c.interlayer.Downloader.GetFile(f)
+			if err != nil {
+				c.l.Logf(logger.ErrorLevel, "Get file '%s' failed: %s", f, err)
+				return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+			}
+			msg := messaging.New("Готово", replyID)
+			msg.UploadAudio(track, "", file)
+			return []messaging.ChatMessage{msg}
+		}
+	}
+	return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
 }

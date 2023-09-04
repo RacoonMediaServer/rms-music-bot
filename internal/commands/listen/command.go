@@ -1,4 +1,4 @@
-package search
+package listen
 
 import (
 	"context"
@@ -12,36 +12,36 @@ import (
 	"time"
 )
 
-type searchCommand struct {
+type listenCommand struct {
 	interlayer connectivity.Interlayer
 	l          logger.Logger
 	f          formatter.Formatter
 }
 
 const (
-	maxResult     int64 = 4
+	maxResult     int64 = 3
 	searchTimeout       = 30 * time.Second
 )
 
 var Command command.Type = command.Type{
-	ID:      "search",
-	Title:   "Поиск музыки",
-	Help:    "Обеспечивает поиск исполнителей, альбомов, треков, позволяет перейти к загрузке",
+	ID:      "listen",
+	Title:   "Прослушивание трека",
+	Help:    "Найти указанный трек и прослушать через Telegram",
 	Factory: New,
 }
 
 func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
-	c := searchCommand{
+	c := listenCommand{
 		interlayer: interlayer,
-		l:          l.Fields(map[string]interface{}{"command": "search"}),
+		l:          l.Fields(map[string]interface{}{"command": "listen"}),
 	}
 	c.f = formatter.New(c.l, c.interlayer.Registry)
 	return &c
 }
 
-func (c searchCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
+func (c listenCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
 	if len(arguments) == 0 {
-		return messaging.NewSingleMessage("Что ищем?", replyID)
+		return messaging.NewSingleMessage("Название песни?", replyID)
 	}
 	const token = ""
 	cli, auth := c.interlayer.Discovery.New(token)
@@ -52,6 +52,7 @@ func (c searchCommand) Do(arguments command.Arguments, replyID int) []messaging.
 	req := music.SearchMusicParams{
 		Limit:   utils.ToPointer(maxResult),
 		Q:       arguments.String(),
+		Type:    utils.ToPointer("track"),
 		Context: ctx,
 	}
 

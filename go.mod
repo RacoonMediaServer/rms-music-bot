@@ -3,7 +3,7 @@ module github.com/RacoonMediaServer/rms-music-bot
 go 1.20
 
 require (
-	github.com/RacoonMediaServer/rms-media-discovery v1.5.5
+	github.com/RacoonMediaServer/rms-media-discovery v1.5.6
 	github.com/RacoonMediaServer/rms-packages v1.10.1
 	github.com/anacrolix/fuse v0.2.1-0.20230813095351-44020f363ce8
 	github.com/anacrolix/torrent v1.52.5
