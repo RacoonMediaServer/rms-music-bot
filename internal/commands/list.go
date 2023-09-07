@@ -26,10 +26,10 @@ func init() {
 	commandMap[search.Command.ID] = search.Command
 }
 
-func NewCommand(commandID string, interlayer connectivity.Interlayer, l logger.Logger) (command.Command, error) {
+func NewCommand(commandID string, interlayer connectivity.Interlayer, l logger.Logger) (command.Command, bool, error) {
 	cmd, ok := commandMap[commandID]
 	if !ok {
-		return nil, ErrCommandNotFound
+		return nil, false, ErrCommandNotFound
 	}
-	return cmd.Factory(interlayer, l), nil
+	return cmd.Factory(interlayer, l), cmd.Internal, nil
 }
