@@ -12,12 +12,14 @@ type Database struct {
 }
 
 func Connect(config configuration.Database) (*Database, error) {
-	db, err := gorm.Open(postgres.Open(config.GetConnectionString()))
+	db, err := gorm.Open(postgres.Open(config.GetConnectionString())) //&gorm.Config{DisableForeignKeyConstraintWhenMigrating: true})
 	if err != nil {
 		return nil, err
 	}
-	if err = db.AutoMigrate(&model.Torrent{}); err != nil {
+	if err = db.AutoMigrate(&model.Artist{}, &model.Content{}, &model.Torrent{}); err != nil {
 		return nil, err
 	}
+	//db.Migrator().CreateConstraint(&model.Artist{}, "Content")
+	//db.Migrator().CreateConstraint(&model.Content{}, "Torrent")
 	return &Database{conn: db}, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/client/music"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/formatter"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
@@ -43,7 +44,7 @@ func (c artistCommand) Do(arguments command.Arguments, replyID int) []messaging.
 	if len(arguments) == 0 {
 		return messaging.NewSingleMessage("Имя исполнителя?", replyID)
 	}
-	const token = ""
+	var token = config.Config().Token // TODO: remove
 	cli, auth := c.interlayer.Discovery.New(token)
 
 	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)

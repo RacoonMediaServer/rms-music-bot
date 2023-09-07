@@ -24,6 +24,7 @@ type Configuration struct {
 	Bot      Bot
 	Layout   Layout
 	Remote   Remote
+	Token    string // TODO: remove
 }
 
 var config Configuration

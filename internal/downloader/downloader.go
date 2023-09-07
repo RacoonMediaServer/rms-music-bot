@@ -62,8 +62,8 @@ func (d *Downloader) Start() error {
 
 	d.l.Log(logger.InfoLevel, "Loading stored torrents...")
 	for _, t := range torrents {
-		if _, err = d.registerTorrent(t.Content); err != nil {
-			d.l.Logf(logger.WarnLevel, "Load '%s' failed: %s", t.Title)
+		if _, err = d.registerTorrent(t.Bytes); err != nil {
+			d.l.Logf(logger.WarnLevel, "Load '%s' failed: %s", t.Title, err)
 		}
 	}
 	d.l.Log(logger.InfoLevel, "Ready")
@@ -118,28 +118,13 @@ func (d *Downloader) registerTorrent(content []byte) (*torrent.Torrent, error) {
 	return t, nil
 }
 
-func (d *Downloader) Download(content []byte) ([]string, error) {
+func (d *Downloader) Add(content []byte) (model.Download, error) {
 	t, err := d.registerTorrent(content)
 	if err != nil {
 		return nil, err
 	}
 
-	rec := model.Torrent{
-		Title:   t.Name(),
-		Content: content,
-	}
-
-	if err = d.db.AddTorrent(&rec); err != nil {
-		d.l.Logf(logger.WarnLevel, "Add torrent to database failed: %s", err)
-	}
-
-	<-t.GotInfo()
-	files := t.Files()
-	result := make([]string, 0, len(files))
-	for _, f := range files {
-		result = append(result, f.Path())
-	}
-	return result, nil
+	return &receipt{t: t}, nil
 }
 
 func (d *Downloader) GetFile(filepath string) ([]byte, error) {
@@ -171,7 +156,7 @@ func (d *Downloader) Wipe() {
 		d.l.Logf(logger.FatalLevel, "Load torrents failed: %s", err)
 	}
 	for _, t := range torrents {
-		if _, err = d.registerTorrent(t.Content); err != nil {
+		if _, err = d.registerTorrent(t.Bytes); err != nil {
 			d.l.Logf(logger.WarnLevel, "Load '%s' failed: %s", t.Title)
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/db"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/downloader"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/provider"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/registry"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/service"
 	"github.com/go-co-op/gocron"
@@ -63,10 +64,13 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Connect to database failed: %s", err)
 	}
+
 	dw := downloader.New(conf.Layout, database)
 	interlayer := connectivity.New(conf.Remote, microService)
-	interlayer.Downloader = dw
+	interlayer.TorrentManager = dw
 	interlayer.Registry = registry.New()
+	interlayer.ContentManager = database
+	interlayer.ContentProvider = provider.NewContentProvider(conf.Layout.Directory)
 
 	tgBot, err := bot.New(conf.Bot.Token, service.New(interlayer))
 	if err != nil {

@@ -7,8 +7,10 @@ import (
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/client/torrents"
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/models"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/model"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/registry"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/selector"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/utils"
@@ -60,7 +62,7 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 
 	allAlbums := args.Album == "" && args.Track == ""
 
-	const token = ""
+	var token = config.Config().Token // TODO: remove
 	cli, auth := c.interlayer.Discovery.New(token)
 	var variants []*models.SearchTorrentsResult
 	var err error
@@ -90,10 +92,32 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 	}
 	chosen := sel.Select(variants)
 
-	_, err = c.download(cli, auth, *chosen.Link)
+	torrentFile, err := c.getTorrentFile(cli, auth, *chosen.Link)
+	if err != nil {
+		c.l.Logf(logger.ErrorLevel, "Get torrent file failed: %s", err)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+	}
+
+	d, err := c.interlayer.TorrentManager.Add(torrentFile)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Enqueue downloading failed: %s", err)
 		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+	}
+
+	contentItem := model.Content{
+		Title: args.Album,
+		Torrent: model.Torrent{
+			Title: d.Title(),
+			Bytes: torrentFile,
+		},
+	}
+
+	if !allAlbums {
+		contentItem.Type = model.Album
+	}
+
+	if err = c.interlayer.ContentManager.AddContent(args.Artist, contentItem); err != nil {
+		c.l.Logf(logger.WarnLevel, "Save downloading to persistent storage failed: %s", err)
 	}
 
 	return messaging.NewSingleMessage("Добавлено", replyID)
@@ -119,7 +143,7 @@ func (c addCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthIn
 	return resp.Payload.Results, nil
 }
 
-func (c addCommand) download(cli *client.Client, auth runtime.ClientAuthInfoWriter, link string) ([]string, error) {
+func (c addCommand) getTorrentFile(cli *client.Client, auth runtime.ClientAuthInfoWriter, link string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
 	defer cancel()
 
@@ -134,5 +158,5 @@ func (c addCommand) download(cli *client.Client, auth runtime.ClientAuthInfoWrit
 		return nil, err
 	}
 
-	return c.interlayer.Downloader.Download(buf.Bytes())
+	return buf.Bytes(), nil
 }
