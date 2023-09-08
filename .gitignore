@@ -16,3 +16,9 @@
 
 # GoLand projects
 .idea
+
+fuse
+downloads
+debug
+
+.env
