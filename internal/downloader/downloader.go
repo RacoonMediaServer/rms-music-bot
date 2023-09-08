@@ -41,7 +41,7 @@ func (d *Downloader) Start() error {
 	if err != nil {
 		return fmt.Errorf("load torrents failed: %w", err)
 	}
-	conn, err := fuse.Mount(d.layout.Directory)
+	conn, err := fuse.Mount(d.layout.Directory, fuse.AllowOther())
 	if err != nil {
 		return fmt.Errorf("mount fuse dir failed: %w", err)
 	}

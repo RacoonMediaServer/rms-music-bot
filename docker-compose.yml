@@ -1,0 +1,57 @@
+version: '3'
+services:
+  global-db:
+    image: postgres:alpine
+    restart: always
+    container_name: global-db
+    volumes:
+      - ../debug/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=rms
+      - POSTGRES_USER=rms
+      - POSTGRES_PASSWORD=qweasd123
+
+  music-bot:
+    user: "33:33"
+    build:
+      context: .
+    restart: always
+    container_name: music-bot
+    privileged: true
+    devices:
+      - /dev/fuse:/dev/fuse
+    volumes:
+      - ../debug/downloads:/media/downloads
+      - ./fuse.conf:/etc/fuse.conf:ro
+      - type: bind
+        source: ../debug/content
+        target: /media/content
+        bind:
+          propagation: rshared
+    environment:
+      - RMS_DATABASE_HOST=global-db
+      - RMS_BOT_TOKEN=${BOT_TOKEN}
+      - RMS_LAYOUT_DIRECTORY=/media/content
+      - RMS_LAYOUT_DOWNLOADS=/media/downloads
+      - RMS_REMOTE_HOST=${REMOTE_HOST}
+      - RMS_REMOTE_PORT=80
+      - RMS_TOKEN=${TOKEN}
+
+  navidrome:
+    image: deluan/navidrome:latest
+    user: 1000:1000 # should be owner of volumes
+    ports:
+      - "8085:4533"
+    restart: unless-stopped
+    environment:
+      # Optional: put your config options customization here. Examples:
+      ND_SCANSCHEDULE: 1m
+      ND_LOGLEVEL: debug
+      ND_SESSIONTIMEOUT: 24h
+      ND_BASEURL: ""
+    volumes:
+      - ../debug/data:/data
+      - type: bind
+        source: ../debug/content
+        target: /music
+        read_only: true
