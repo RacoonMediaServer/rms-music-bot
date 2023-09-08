@@ -28,6 +28,12 @@ type Downloader struct {
 	mu sync.RWMutex
 }
 
+func init() {
+	fuse.Debug = func(msg interface{}) {
+		logger.Infof("fuse: %s", msg)
+	}
+}
+
 func New(layout config.Layout, db Database) *Downloader {
 	return &Downloader{
 		layout: layout,
