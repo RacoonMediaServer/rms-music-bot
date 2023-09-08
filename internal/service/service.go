@@ -23,6 +23,9 @@ func (s *Service) HandleMessage(messageID, userID int, userName, text string) []
 		text = fmt.Sprintf("/%s %s", s.lastCommand, text)
 	}
 	commandID, args := command.Parse(text)
+	if commandID == "start" {
+		commandID = "help"
+	}
 	cmd, isInternal, err := commands.NewCommand(commandID, s.interlayer, logger.DefaultLogger)
 	if err != nil {
 		logger.Warnf("cannot execute command '%s': %s", commandID, err)
