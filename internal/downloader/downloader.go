@@ -18,6 +18,7 @@ import (
 )
 
 const mainRoute = "music"
+const cacheTTL = 1 * time.Hour
 
 type Downloader struct {
 	layout config.Layout
@@ -57,10 +58,11 @@ func (d *Downloader) Start() error {
 	if err != nil {
 		return fmt.Errorf("create cache failed: %w", err)
 	}
+	fcache.SetCapacity(int64(d.layout.Limit) * 1024 * 1024 * 1024)
 
 	torrentStorage := storage.NewResourcePieces(fcache.AsResourceProvider())
 
-	fileStore, err := torrent.NewFileItemStore(filepath.Join(d.layout.Downloads, "items"), 2*time.Hour)
+	fileStore, err := torrent.NewFileItemStore(filepath.Join(d.layout.Downloads, "items"), cacheTTL)
 	if err != nil {
 		return fmt.Errorf("create file store failed: %w", err)
 	}

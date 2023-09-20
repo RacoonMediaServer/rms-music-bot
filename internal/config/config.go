@@ -9,6 +9,7 @@ type Bot struct {
 type Layout struct {
 	Directory string
 	Downloads string
+	Limit     uint // Gigabytes
 }
 
 type Remote struct {

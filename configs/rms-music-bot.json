@@ -11,7 +11,8 @@
   },
   "layout": {
     "directory": "fuse",
-    "downloads": "downloads"
+    "downloads": "downloads",
+    "limit": 5
   },
   "remote": {
     "scheme": "http",

@@ -46,14 +46,14 @@ services:
     restart: unless-stopped
     environment:
       # Optional: put your config options customization here. Examples:
-      ND_SCANSCHEDULE: 1m
+      ND_SCANSCHEDULE: 1h
       ND_LOGLEVEL: debug
       ND_SESSIONTIMEOUT: 24h
       ND_BASEURL: ""
     volumes:
       - ../debug/data:/data
       - type: bind
-        source: ../debug/content2
+        source: ../debug/content2/music
         target: /music
         read_only: true
     depends_on:
