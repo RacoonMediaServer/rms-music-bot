@@ -12,7 +12,6 @@ services:
       - POSTGRES_PASSWORD=qweasd123
 
   music-bot:
-    user: "33:33"
     build:
       context: .
     restart: always
@@ -24,7 +23,7 @@ services:
       - ../debug/downloads:/media/downloads
       - ./fuse.conf:/etc/fuse.conf:ro
       - type: bind
-        source: ../debug/content
+        source: ../debug/content2
         target: /media/content
         bind:
           propagation: rshared
@@ -36,6 +35,8 @@ services:
       - RMS_REMOTE_HOST=${REMOTE_HOST}
       - RMS_REMOTE_PORT=80
       - RMS_TOKEN=${TOKEN}
+    depends_on:
+      - global-db
 
   navidrome:
     image: deluan/navidrome:latest
@@ -52,6 +53,8 @@ services:
     volumes:
       - ../debug/data:/data
       - type: bind
-        source: ../debug/content
+        source: ../debug/content2
         target: /music
         read_only: true
+    depends_on:
+      - music-bot
