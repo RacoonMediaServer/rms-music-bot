@@ -1,37 +1,37 @@
 package downloader
 
 import (
-	"bytes"
 	"fmt"
+	tConfig "github.com/RacoonMediaServer/distribyted/config"
+	"github.com/RacoonMediaServer/distribyted/fuse"
+	"github.com/RacoonMediaServer/distribyted/torrent"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
-	"github.com/RacoonMediaServer/rms-music-bot/internal/model"
-	"github.com/anacrolix/fuse"
-	fusefs "github.com/anacrolix/fuse/fs"
-	"github.com/anacrolix/torrent"
-	torrentfs "github.com/anacrolix/torrent/fs"
-	"github.com/anacrolix/torrent/metainfo"
+	"github.com/anacrolix/missinggo/v2/filecache"
+	aTorrent "github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/storage"
 	"go-micro.dev/v4/logger"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
+	"time"
 )
+
+const mainRoute = "music"
 
 type Downloader struct {
 	layout config.Layout
 	db     Database
-	cli    *torrent.Client
 	l      logger.Logger
-	fs     *torrentfs.TorrentFS
 	wg     sync.WaitGroup
+
+	fuse      *fuse.Handler
+	fileStore *torrent.FileItemStore
+	cli       *aTorrent.Client
+	service   *torrent.Service
 
 	// TODO: сделать отдельный глобальный режим для обслуживания, лочка - плохо
 	mu sync.RWMutex
-}
-
-func init() {
-	fuse.Debug = func(msg interface{}) {
-		logger.Infof("fuse: %s", msg)
-	}
 }
 
 func New(layout config.Layout, db Database) *Downloader {
@@ -43,137 +43,98 @@ func New(layout config.Layout, db Database) *Downloader {
 }
 
 func (d *Downloader) Start() error {
-	torrents, err := d.db.LoadTorrents()
+	if err := os.MkdirAll(d.layout.Directory, 0744); err != nil {
+		return fmt.Errorf("create content directory failed: %w", err)
+	}
+	if err := os.MkdirAll(d.layout.Downloads, 0744); err != nil {
+		return fmt.Errorf("create downloads directory failed: %w", err)
+	}
+	pieceCompletionDir := filepath.Join(d.layout.Downloads, "piece-completion")
+	if err := os.MkdirAll(pieceCompletionDir, 0744); err != nil {
+		return fmt.Errorf("create piece completion directory failed: %w", err)
+	}
+	fcache, err := filecache.NewCache(filepath.Join(d.layout.Downloads, "cache"))
+	if err != nil {
+		return fmt.Errorf("create cache failed: %w", err)
+	}
+
+	torrentStorage := storage.NewResourcePieces(fcache.AsResourceProvider())
+
+	fileStore, err := torrent.NewFileItemStore(filepath.Join(d.layout.Downloads, "items"), 2*time.Hour)
+	if err != nil {
+		return fmt.Errorf("create file store failed: %w", err)
+	}
+
+	id, err := torrent.GetOrCreatePeerID(filepath.Join(d.layout.Downloads, "ID"))
+	if err != nil {
+		return fmt.Errorf("create ID failed: %w", err)
+	}
+
+	conf := tConfig.TorrentGlobal{
+		ReadTimeout:     120,
+		AddTimeout:      60,
+		GlobalCacheSize: -1,
+		MetadataFolder:  d.layout.Downloads,
+		DisableIPv6:     false,
+	}
+
+	cli, err := torrent.NewClient(torrentStorage, fileStore, &conf, id)
+	if err != nil {
+		return fmt.Errorf("start torrent client failed: %w", err)
+	}
+
+	//pieceCompletionStorage, err := storage.NewBoltPieceCompletion(pieceCompletionDir)
+	//if err != nil {
+	//	return fmt.Errorf("create piece completion storage failed: %w", err)
+	//}
+
+	stats := torrent.NewStats()
+
+	loaders := []torrent.DatabaseLoader{&loader{db: d.db}}
+	service := torrent.NewService(loaders, stats, cli, conf.AddTimeout, conf.ReadTimeout)
+
+	fss, err := service.Load()
 	if err != nil {
 		return fmt.Errorf("load torrents failed: %w", err)
 	}
-	conn, err := fuse.Mount(d.layout.Directory, fuse.AllowOther())
-	if err != nil {
-		return fmt.Errorf("mount fuse dir failed: %w", err)
+
+	mh := fuse.NewHandler(true, d.layout.Directory)
+	if err = mh.Mount(fss); err != nil {
+		return fmt.Errorf("mount fuse directory: %w", err)
 	}
 
-	cfg := torrent.NewDefaultClientConfig()
-	cfg.DataDir = d.layout.Downloads
-	cfg.NoUpload = true // Ensure that downloads are responsive.
-	d.cli, err = torrent.NewClient(cfg)
-	if err != nil {
-		_ = fuse.Unmount(d.layout.Directory)
-		return fmt.Errorf("create torrent client failed: %w", err)
-	}
-
-	d.fs = torrentfs.New(d.cli)
-
-	d.wg.Add(1)
-	go d.serveFS(conn)
-
-	d.l.Log(logger.InfoLevel, "Loading stored torrents...")
-	for _, t := range torrents {
-		if _, err = d.registerTorrent(t.Bytes); err != nil {
-			d.l.Logf(logger.WarnLevel, "Load '%s' failed: %s", t.Title, err)
-		}
-	}
-	d.l.Log(logger.InfoLevel, "Ready")
+	d.fuse = mh
+	d.fileStore = fileStore
+	d.cli = cli
+	d.service = service
 
 	return nil
 }
 
-func (d *Downloader) serveFS(conn *fuse.Conn) {
-	defer d.wg.Done()
-
-	if err := fusefs.Serve(conn, d.fs); err != nil {
-		d.l.Logf(logger.ErrorLevel, "Serve filesystem failed: %s", err)
-		return
-	}
-	<-conn.Ready
-	if err := conn.MountError; err != nil {
-		d.l.Logf(logger.ErrorLevel, "Mount error: %s", err)
-	}
-}
-
-func (d *Downloader) registerTorrent(content []byte) (*torrent.Torrent, error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-
-	var spec *torrent.TorrentSpec
-	isMagnet := isMagnetLink(content)
-	if !isMagnet {
-		mi, err := metainfo.Load(bytes.NewReader(content))
-		if err != nil {
-			return nil, err
-		}
-		spec = torrent.TorrentSpecFromMetaInfo(mi)
-	} else {
-		var err error
-		spec, err = torrent.TorrentSpecFromMagnetUri(string(content))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	opts := torrent.AddTorrentOpts{
-		InfoHash:  spec.InfoHash,
-		ChunkSize: spec.ChunkSize,
-	}
-
-	t, _ := d.cli.AddTorrentOpt(opts)
-	if err := t.MergeSpec(spec); err != nil {
-		t.Drop()
-		return nil, err
-	}
-
-	return t, nil
-}
-
-func (d *Downloader) Add(content []byte) (model.Download, error) {
-	t, err := d.registerTorrent(content)
+func (d *Downloader) Add(content []byte) (string, error) {
+	title, err := d.service.Add(mainRoute, content)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-
-	return &receipt{t: t}, nil
+	return title, nil
 }
 
 func (d *Downloader) GetFile(filepath string) ([]byte, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
-	return os.ReadFile(path.Join(d.layout.Directory, filepath))
+	return os.ReadFile(path.Join(d.layout.Directory, mainRoute, filepath))
 }
 
 func (d *Downloader) Wipe() {
-	d.mu.Lock()
-
 	d.l.Logf(logger.InfoLevel, "Wiping...")
 
-	curTorrents := d.cli.Torrents()
-	for _, t := range curTorrents {
-		t.Drop()
-	}
-	files, err := os.ReadDir(d.layout.Downloads)
-	if err != nil {
-		d.l.Logf(logger.FatalLevel, "Get downloaded files failed: %s", err)
-	}
-	for _, f := range files {
-		_ = os.RemoveAll(path.Join(d.layout.Downloads, f.Name()))
-	}
-	d.mu.Unlock()
-
-	torrents, err := d.db.LoadTorrents()
-	if err != nil {
-		d.l.Logf(logger.FatalLevel, "Load torrents failed: %s", err)
-	}
-	for _, t := range torrents {
-		if _, err = d.registerTorrent(t.Bytes); err != nil {
-			d.l.Logf(logger.WarnLevel, "Load '%s' failed: %s", t.Title)
-		}
-	}
+	// TODO
 
 	d.l.Logf(logger.InfoLevel, "Wipe successfully done")
 }
 
 func (d *Downloader) Stop() {
-	d.fs.Destroy()
-	if err := fuse.Unmount(d.layout.Directory); err != nil {
-		d.l.Logf(logger.ErrorLevel, "Umount failed: %s", err)
-	}
-	d.wg.Wait()
+	_ = d.fileStore.Close()
+	d.cli.Close()
+	d.fuse.Unmount()
 }

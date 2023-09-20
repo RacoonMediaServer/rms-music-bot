@@ -98,7 +98,7 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
 	}
 
-	d, err := c.interlayer.TorrentManager.Add(torrentFile)
+	directory, err := c.interlayer.TorrentManager.Add(torrentFile)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Enqueue downloading failed: %s", err)
 		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
@@ -107,7 +107,7 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 	contentItem := model.Content{
 		Title: args.Album,
 		Torrent: model.Torrent{
-			Title: d.Title(),
+			Title: directory,
 			Bytes: torrentFile,
 		},
 	}

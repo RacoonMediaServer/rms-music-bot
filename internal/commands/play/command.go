@@ -148,7 +148,7 @@ func (c playCommand) download(args *command.DownloadArguments, contentType model
 		return "", fmt.Errorf("get torrent file failed: %w", err)
 	}
 
-	d, err := c.interlayer.TorrentManager.Add(torrentFile)
+	directory, err := c.interlayer.TorrentManager.Add(torrentFile)
 	if err != nil {
 		return "", fmt.Errorf("enqueue downloading failed: %w", err)
 	}
@@ -157,7 +157,7 @@ func (c playCommand) download(args *command.DownloadArguments, contentType model
 		Title: title,
 		Type:  contentType,
 		Torrent: model.Torrent{
-			Title: d.Title(),
+			Title: directory,
 			Bytes: torrentFile,
 		},
 	}
@@ -166,8 +166,7 @@ func (c playCommand) download(args *command.DownloadArguments, contentType model
 		c.l.Logf(logger.WarnLevel, "Save downloading to persistent storage failed: %s", err)
 	}
 
-	d.Wait()
-	return d.Title(), nil
+	return directory, nil
 }
 
 func (c playCommand) findExistingDirectory(args *command.DownloadArguments) (string, error) {

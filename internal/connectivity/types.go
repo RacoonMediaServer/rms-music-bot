@@ -19,7 +19,7 @@ type Interlayer struct {
 }
 
 type TorrentManager interface {
-	Add(content []byte) (model.Download, error)
+	Add(content []byte) (string, error)
 	GetFile(path string) ([]byte, error)
 }
 

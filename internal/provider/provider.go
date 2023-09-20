@@ -24,12 +24,15 @@ func NewContentProvider(directory string) ContentProvider {
 }
 
 func (p contentProvider) FindTrack(basePath, trackName string) ([]byte, error) {
-	absolutePath := filepath.Join(p.directory, basePath)
+	absolutePath := filepath.Join(p.directory, "music", basePath)
 	trackName = heuristic.Normalize(trackName)
 	found := ""
 
 	err := filepath.WalkDir(absolutePath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
 			return nil
 		}
 		normalized := heuristic.Normalize(d.Name())
