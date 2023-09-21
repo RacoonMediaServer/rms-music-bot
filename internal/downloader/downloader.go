@@ -129,14 +129,6 @@ func (d *Downloader) GetFile(filepath string) ([]byte, error) {
 	return os.ReadFile(path.Join(d.layout.Directory, mainRoute, filepath))
 }
 
-func (d *Downloader) Wipe() {
-	d.l.Logf(logger.InfoLevel, "Wiping...")
-
-	// TODO
-
-	d.l.Logf(logger.InfoLevel, "Wipe successfully done")
-}
-
 func (d *Downloader) Stop() {
 	_ = d.fileStore.Close()
 	d.cli.Close()
