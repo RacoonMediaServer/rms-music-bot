@@ -3,7 +3,10 @@ package provider
 import (
 	"errors"
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/heuristic"
+	"github.com/antzucaro/matchr"
+	"go-micro.dev/v4/logger"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +30,8 @@ func (p contentProvider) FindTrack(basePath, trackName string) ([]byte, error) {
 	absolutePath := filepath.Join(p.directory, "music", basePath)
 	trackName = heuristic.Normalize(trackName)
 	found := ""
+	minDistance := math.MaxInt
+	similarPath := ""
 
 	err := filepath.WalkDir(absolutePath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -35,8 +40,20 @@ func (p contentProvider) FindTrack(basePath, trackName string) ([]byte, error) {
 		if d.IsDir() {
 			return nil
 		}
+		if filepath.Ext(d.Name()) != ".mp3" {
+			return nil
+		}
+
 		normalized := heuristic.Normalize(d.Name())
-		if strings.Index(normalized, trackName) >= 0 {
+		pos := strings.Index(normalized, trackName)
+		distance := matchr.Levenshtein(normalized, trackName)
+		if distance < minDistance {
+			minDistance = distance
+			similarPath = path
+		}
+
+		logger.Infof("Compare %s == %s = %d", trackName, normalized, pos)
+		if pos >= 0 {
 			found = path
 			return filepath.SkipAll
 		}
@@ -46,6 +63,10 @@ func (p contentProvider) FindTrack(basePath, trackName string) ([]byte, error) {
 		return nil, err
 	}
 	if found == "" {
+		if minDistance != math.MaxInt && minDistance < len(trackName)/2 {
+			logger.Infof("Approximated result for '%s' = %s, distance = %d", trackName, similarPath, minDistance)
+			return os.ReadFile(similarPath)
+		}
 		return nil, ErrNotFound
 	}
 	return os.ReadFile(found)
