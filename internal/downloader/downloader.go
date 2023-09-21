@@ -19,6 +19,8 @@ import (
 
 const mainRoute = "music"
 const cacheTTL = 1 * time.Hour
+const readTimeout = 60
+const addTimeout = 60
 
 type Downloader struct {
 	layout config.Layout
@@ -73,8 +75,8 @@ func (d *Downloader) Start() error {
 	}
 
 	conf := tConfig.TorrentGlobal{
-		ReadTimeout:     120,
-		AddTimeout:      60,
+		ReadTimeout:     readTimeout,
+		AddTimeout:      addTimeout,
 		GlobalCacheSize: -1,
 		MetadataFolder:  d.layout.Downloads,
 		DisableIPv6:     false,
