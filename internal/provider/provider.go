@@ -51,8 +51,6 @@ func (p contentProvider) FindTrack(basePath, trackName string) ([]byte, error) {
 			minDistance = distance
 			similarPath = path
 		}
-
-		logger.Infof("Compare %s == %s = %d", trackName, normalized, pos)
 		if pos >= 0 {
 			found = path
 			return filepath.SkipAll
@@ -64,7 +62,7 @@ func (p contentProvider) FindTrack(basePath, trackName string) ([]byte, error) {
 	}
 	if found == "" {
 		if minDistance != math.MaxInt && minDistance < len(trackName)/2 {
-			logger.Infof("Approximated result for '%s' = %s, distance = %d", trackName, similarPath, minDistance)
+			logger.Debugf("Approximated result for '%s' = %s, distance = %d", trackName, similarPath, minDistance)
 			return os.ReadFile(similarPath)
 		}
 		return nil, ErrNotFound
