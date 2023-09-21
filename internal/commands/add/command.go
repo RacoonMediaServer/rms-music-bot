@@ -64,23 +64,14 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 
 	var token = config.Config().Token // TODO: remove
 	cli, auth := c.interlayer.Discovery.New(token)
-	var variants []*models.SearchTorrentsResult
-	var err error
 
-	for len(variants) == 0 {
-		variants, err = c.searchTorrents(cli, auth, q, allAlbums)
-		if err != nil {
-			c.l.Logf(logger.ErrorLevel, "Search torrents failed: %s", err)
-			return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
-		}
-		if len(variants) == 0 {
-			if !allAlbums {
-				allAlbums = true
-				q = args.Artist
-			} else {
-				return messaging.NewSingleMessage(command.NothingFound, replyID)
-			}
-		}
+	variants, err := c.searchTorrents(cli, auth, q, allAlbums)
+	if err != nil {
+		c.l.Logf(logger.ErrorLevel, "Search torrents failed: %s", err)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+	}
+	if len(variants) == 0 {
+		return messaging.NewSingleMessage(command.NothingFound, replyID)
 	}
 
 	sel := selector.MusicSelector{
