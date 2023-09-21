@@ -74,5 +74,5 @@ func (c listenCommand) Do(arguments command.Arguments, replyID int) []messaging.
 		}
 	}
 	c.l.Logf(logger.InfoLevel, "Got %d results", len(messages))
-	return messages
+	return messaging.Reverse(messages)
 }
