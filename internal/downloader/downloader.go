@@ -9,6 +9,7 @@ import (
 	"github.com/anacrolix/missinggo/v2/filecache"
 	aTorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/storage"
+	"github.com/rs/zerolog"
 	"go-micro.dev/v4/logger"
 	"os"
 	"path"
@@ -32,9 +33,10 @@ type Downloader struct {
 	fileStore *torrent.FileItemStore
 	cli       *aTorrent.Client
 	service   *torrent.Service
+}
 
-	// TODO: сделать отдельный глобальный режим для обслуживания, лочка - плохо
-	mu sync.RWMutex
+func init() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 }
 
 func New(layout config.Layout, db Database) *Downloader {
@@ -87,11 +89,6 @@ func (d *Downloader) Start() error {
 		return fmt.Errorf("start torrent client failed: %w", err)
 	}
 
-	//pieceCompletionStorage, err := storage.NewBoltPieceCompletion(pieceCompletionDir)
-	//if err != nil {
-	//	return fmt.Errorf("create piece completion storage failed: %w", err)
-	//}
-
 	stats := torrent.NewStats()
 
 	loaders := []torrent.DatabaseLoader{&loader{db: d.db}}
@@ -124,8 +121,6 @@ func (d *Downloader) Add(content []byte) (string, error) {
 }
 
 func (d *Downloader) GetFile(filepath string) ([]byte, error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
 	return os.ReadFile(path.Join(d.layout.Directory, mainRoute, filepath))
 }
 
