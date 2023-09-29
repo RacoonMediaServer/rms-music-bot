@@ -2,9 +2,9 @@ package selector
 
 import (
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/models"
+	"github.com/RacoonMediaServer/rms-media-discovery/pkg/heuristic"
 	"github.com/antzucaro/matchr"
 	"go-micro.dev/v4/logger"
-	"strings"
 )
 
 type MusicSelector struct {
@@ -99,9 +99,9 @@ func (s MusicSelector) rankByText(query string, list []*models.SearchTorrentsRes
 	ranks := make([]float32, len(list))
 	distance := make([]int, len(list))
 
-	target := strings.ToLower(query)
+	target := heuristic.NormalizeWithoutBraces(query)
 	for i, t := range list {
-		title := strings.ToLower(*t.Title)
+		title := heuristic.NormalizeWithoutBraces(*t.Title)
 		distance[i] = matchr.Levenshtein(title, target)
 	}
 
