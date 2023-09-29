@@ -259,6 +259,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deepmap/oapi-codegen v1.3.11/go.mod h1:suMvK7+rKlx3+tpa8ByptmvoXbAV70wERKTOGH3hLp0=
+github.com/delucks/go-subsonic v0.0.0-20220915164742-2744002c4be5 h1:RuuxidatioSKGOiBzL1mTY4X22DQD8weEbS3iRLHnAg=
+github.com/delucks/go-subsonic v0.0.0-20220915164742-2744002c4be5/go.mod h1:vnbEuj6Z20PLcHB4rrLQAOXGMjtULfMGhRVSFPcSdUo=
 github.com/dgraph-io/badger/v3 v3.2103.5 h1:ylPa6qzbjYRQMU6jokoj4wzcaweHylt//CH0AKt0akg=
 github.com/dgraph-io/badger/v3 v3.2103.5/go.mod h1:4MPiseMeDQ3FNCYwRbbcBOGJLf5jsE0PPFzRiKjtcdw=
 github.com/dgraph-io/ristretto v0.1.1 h1:6CWw5tJNgpegArSHpNHJKldNeq03FQCwYvfMVWajOK8=

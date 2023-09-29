@@ -19,13 +19,22 @@ type Remote struct {
 	Path   string
 }
 
+type HealthCheck struct {
+	Enabled  bool
+	Server   string
+	Username string
+	Password string
+	Fifo     string
+}
+
 // Configuration represents entire service configuration
 type Configuration struct {
-	Database configuration.Database
-	Bot      Bot
-	Layout   Layout
-	Remote   Remote
-	Token    string // TODO: remove
+	Database    configuration.Database
+	Bot         Bot
+	Layout      Layout
+	Remote      Remote
+	Token       string // TODO: remove
+	HealthCheck HealthCheck
 }
 
 var config Configuration

@@ -7,6 +7,7 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/db"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/downloader"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/health"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/provider"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/registry"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/service"
@@ -79,9 +80,13 @@ func main() {
 		logger.Fatalf("Start downloader failed: %s", err)
 	}
 
+	chk := health.NewChecker(conf.HealthCheck)
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	<-c
+
+	chk.Stop()
 	tgBot.Stop()
 	dw.Stop()
 }
