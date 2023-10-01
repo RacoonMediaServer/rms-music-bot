@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	checkInterval   = 5 * time.Minute
+	checkInterval   = 15 * time.Minute
 	readPieceSize   = 16 * 1024
 	downloadTimeout = 60 * time.Second
 )
