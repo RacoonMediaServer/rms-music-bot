@@ -30,6 +30,11 @@ type Service struct {
 	Password string
 }
 
+type UserControl struct {
+	Enabled      bool
+	DefaultToken string `json:"default-token"`
+}
+
 // Configuration represents entire service configuration
 type Configuration struct {
 	Database    configuration.Database
@@ -38,7 +43,7 @@ type Configuration struct {
 	Remote      Remote
 	Service     Service
 	HealthCheck HealthCheck
-	Token       string // TODO: remove
+	UserControl UserControl `json:"user-control"`
 }
 
 var config Configuration

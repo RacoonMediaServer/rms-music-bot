@@ -9,7 +9,6 @@ import (
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/client/torrents"
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/models"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
-	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/model"
@@ -35,11 +34,14 @@ const (
 )
 
 var Command command.Type = command.Type{
-	ID:       "play",
-	Title:    "Прослушать трек",
-	Help:     "",
-	Factory:  New,
-	Internal: true,
+	ID:      "play",
+	Title:   "Прослушать трек",
+	Help:    "",
+	Factory: New,
+	Attributes: command.Attributes{
+		Internal:     true,
+		AuthRequired: true,
+	},
 }
 
 func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
@@ -49,29 +51,29 @@ func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
 	}
 }
 
-func (c playCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
-	if len(arguments) != 1 {
-		return messaging.NewSingleMessage(command.ParseArgumentsFailed, replyID)
+func (c playCommand) Do(ctx command.Context) []messaging.ChatMessage {
+	if len(ctx.Arguments) != 1 {
+		return messaging.NewSingleMessage(command.ParseArgumentsFailed, ctx.ReplyID)
 	}
 
-	args, ok := registry.Get[*command.DownloadArguments](c.interlayer.Registry, arguments[0])
+	args, ok := registry.Get[*command.DownloadArguments](c.interlayer.Registry, ctx.Arguments[0])
 	if !ok || !args.IsValid() {
 		c.l.Logf(logger.WarnLevel, "Possible short link has expired")
-		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
 	}
 	directory, err := c.findExistingDirectory(args)
 	if err != nil {
-		directory, err = c.download(args, model.Discography)
+		directory, err = c.download(args, model.Discography, ctx.Token)
 		if err != nil {
 			if errors.Is(err, errNotFound) {
-				return messaging.NewSingleMessage(command.NothingFound, replyID)
+				return messaging.NewSingleMessage(command.NothingFound, ctx.ReplyID)
 			}
 			c.l.Logf(logger.ErrorLevel, "Download content failed: %s", err)
-			return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+			return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
 		}
 	}
 
-	return c.play(args, directory, replyID)
+	return c.play(args, directory, ctx.ReplyID)
 }
 
 func (c playCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthInfoWriter, q string) ([]*models.SearchTorrentsResult, error) {
@@ -112,8 +114,7 @@ func (c playCommand) getTorrentFile(cli *client.Client, auth runtime.ClientAuthI
 	return buf.Bytes(), nil
 }
 
-func (c playCommand) download(args *command.DownloadArguments, contentType model.ContentType) (string, error) {
-	var token = config.Config().Token // TODO: remove
+func (c playCommand) download(args *command.DownloadArguments, contentType model.ContentType, token string) (string, error) {
 	cli, auth := c.interlayer.Discovery.New(token)
 	var variants []*models.SearchTorrentsResult
 	var err error

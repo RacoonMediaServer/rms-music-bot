@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/client/music"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
-	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/formatter"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
@@ -29,6 +28,10 @@ var Command command.Type = command.Type{
 	Title:   "Поиск исполнителей",
 	Help:    "Позволяет добавить дискографию исполнителя целиком",
 	Factory: New,
+	Attributes: command.Attributes{
+		AuthRequired: true,
+		CanRepeat:    true,
+	},
 }
 
 func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
@@ -40,35 +43,35 @@ func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
 	return &c
 }
 
-func (c artistCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
-	if len(arguments) == 0 {
-		return messaging.NewSingleMessage("Имя исполнителя?", replyID)
+func (c artistCommand) Do(ctx command.Context) []messaging.ChatMessage {
+	if len(ctx.Arguments) == 0 {
+		return messaging.NewSingleMessage("Имя исполнителя?", ctx.ReplyID)
 	}
-	var token = config.Config().Token // TODO: remove
-	cli, auth := c.interlayer.Discovery.New(token)
 
-	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
+	cli, auth := c.interlayer.Discovery.New(ctx.Token)
+
+	reqCtx, cancel := context.WithTimeout(context.Background(), searchTimeout)
 	defer cancel()
 
 	req := music.SearchMusicParams{
 		Limit:   utils.ToPointer(maxResult),
-		Q:       arguments.String(),
+		Q:       ctx.Arguments.String(),
 		Type:    utils.ToPointer("artist"),
-		Context: ctx,
+		Context: reqCtx,
 	}
 
 	resp, err := cli.Music.SearchMusic(&req, auth)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Search music failed: %s", err)
-		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
 	}
 	if len(resp.Payload.Results) == 0 {
-		return messaging.NewSingleMessage(command.NothingFound, replyID)
+		return messaging.NewSingleMessage(command.NothingFound, ctx.ReplyID)
 	}
 
 	messages := make([]messaging.ChatMessage, 0, len(resp.Payload.Results))
 	for _, item := range resp.Payload.Results {
-		msg := c.f.FormatSearchMusicResult(item, replyID)
+		msg := c.f.FormatSearchMusicResult(item, ctx.ReplyID)
 		if msg != nil {
 			messages = append(messages, msg)
 		}

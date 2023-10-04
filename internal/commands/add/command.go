@@ -7,7 +7,6 @@ import (
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/client/torrents"
 	"github.com/RacoonMediaServer/rms-media-discovery/pkg/client/models"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
-	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/model"
@@ -30,11 +29,14 @@ const (
 )
 
 var Command command.Type = command.Type{
-	ID:       "add",
-	Title:    "Добавление музыки",
-	Help:     "Добавляет музыку в библиотеку",
-	Factory:  New,
-	Internal: true,
+	ID:      "add",
+	Title:   "Добавление музыки",
+	Help:    "Добавляет музыку в библиотеку",
+	Factory: New,
+	Attributes: command.Attributes{
+		Internal:     true,
+		AuthRequired: true,
+	},
 }
 
 func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
@@ -44,15 +46,15 @@ func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
 	}
 }
 
-func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
-	if len(arguments) != 1 {
-		return messaging.NewSingleMessage(command.ParseArgumentsFailed, replyID)
+func (c addCommand) Do(ctx command.Context) []messaging.ChatMessage {
+	if len(ctx.Arguments) != 1 {
+		return messaging.NewSingleMessage(command.ParseArgumentsFailed, ctx.ReplyID)
 	}
 
-	args, ok := registry.Get[*command.DownloadArguments](c.interlayer.Registry, arguments[0])
+	args, ok := registry.Get[*command.DownloadArguments](c.interlayer.Registry, ctx.Arguments[0])
 	if !ok || !args.IsValid() {
 		c.l.Logf(logger.WarnLevel, "Possible short link has expired")
-		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
 	}
 
 	q := args.Artist
@@ -62,16 +64,15 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 
 	allAlbums := args.Album == "" && args.Track == ""
 
-	var token = config.Config().Token // TODO: remove
-	cli, auth := c.interlayer.Discovery.New(token)
+	cli, auth := c.interlayer.Discovery.New(ctx.Token)
 
 	variants, err := c.searchTorrents(cli, auth, q, allAlbums)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Search torrents failed: %s", err)
-		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
 	}
 	if len(variants) == 0 {
-		return messaging.NewSingleMessage(command.NothingFound, replyID)
+		return messaging.NewSingleMessage(command.NothingFound, ctx.ReplyID)
 	}
 
 	sel := selector.MusicSelector{
@@ -86,13 +87,13 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 	torrentFile, err := c.getTorrentFile(cli, auth, *chosen.Link)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Get torrent file failed: %s", err)
-		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
 	}
 
 	directory, err := c.interlayer.TorrentManager.Add(torrentFile)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Enqueue downloading failed: %s", err)
-		return messaging.NewSingleMessage(command.SomethingWentWrong, replyID)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
 	}
 
 	contentItem := model.Content{
@@ -111,7 +112,7 @@ func (c addCommand) Do(arguments command.Arguments, replyID int) []messaging.Cha
 		c.l.Logf(logger.WarnLevel, "Save downloading to persistent storage failed: %s", err)
 	}
 
-	return messaging.NewSingleMessage("Добавлено", replyID)
+	return messaging.NewSingleMessage("Добавлено", ctx.ReplyID)
 }
 
 func (c addCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthInfoWriter, q string, allAlbums bool) ([]*models.SearchTorrentsResult, error) {

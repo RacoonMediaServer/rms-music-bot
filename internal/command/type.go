@@ -1,5 +1,15 @@
 package command
 
+// Attributes means some traits about Command
+type Attributes struct {
+	// Internal - do not print command on help list
+	Internal bool
+	// CanRepeat - after command done, bot could pass next message to arguments
+	CanRepeat bool
+	// AuthRequired - need user credentials for run command
+	AuthRequired bool
+}
+
 // Type describes commands of specific types
 type Type struct {
 	// ID is a command name
@@ -14,6 +24,6 @@ type Type struct {
 	// Factory can create commands of specific type
 	Factory Factory
 
-	// Internal means that the command is not visible via /help
-	Internal bool
+	// Attributes are traits of the command
+	Attributes Attributes
 }

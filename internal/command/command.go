@@ -13,8 +13,16 @@ func IsCommand(text string) bool {
 	return text[0] == '/'
 }
 
+type Context struct {
+	Arguments Arguments
+	ReplyID   int
+	Token     string
+	UserName  string
+	UserID    int
+}
+
 type Command interface {
-	Do(arguments Arguments, replyID int) []messaging.ChatMessage
+	Do(ctx Context) []messaging.ChatMessage
 }
 
 // Parse splits text string to command name and arguments

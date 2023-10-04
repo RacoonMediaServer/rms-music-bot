@@ -25,6 +25,10 @@
     "username": "",
     "password": ""
   },
+  "user-control": {
+    "enabled": true,
+    "default-token": ""
+  },
   "healthcheck": {
     "enabled": false,
     "fifo": ""

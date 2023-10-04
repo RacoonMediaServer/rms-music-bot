@@ -14,12 +14,26 @@ var helpCommandType = command.Type{
 	Title:   "Справка",
 	Help:    "Пояснить за функции бота",
 	Factory: newHelpCommand,
+	Attributes: command.Attributes{
+		AuthRequired: true,
+	},
+}
+
+var startCommandType = command.Type{
+	ID:      "start",
+	Title:   "Начало",
+	Help:    "Начать работу с ботом",
+	Factory: newHelpCommand,
+	Attributes: command.Attributes{
+		Internal:     true,
+		AuthRequired: true,
+	},
 }
 
 type helpCommand struct {
 }
 
-func (h helpCommand) Do(arguments command.Arguments, replyID int) []messaging.ChatMessage {
+func (h helpCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	titles := make([]string, 0, len(commandMap))
 	for k, _ := range commandMap {
 		titles = append(titles, k)
@@ -34,13 +48,13 @@ func (h helpCommand) Do(arguments command.Arguments, replyID int) []messaging.Ch
 
 	for _, t := range titles {
 		cmd := commandMap[t]
-		if !cmd.Internal {
+		if !cmd.Attributes.Internal {
 			result += fmt.Sprintf("/%s %s - %s\n", cmd.ID, cmd.Title, cmd.Help)
 		}
 	}
 
 	result += "\nВесь функционал на данный момент является <b>демо-версией</b>."
-	return messaging.NewSingleMessage(result, replyID)
+	return messaging.NewSingleMessage(result, ctx.ReplyID)
 }
 
 func newHelpCommand(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
