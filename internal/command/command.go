@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
 	"strings"
 )
@@ -14,6 +15,7 @@ func IsCommand(text string) bool {
 }
 
 type Context struct {
+	Ctx       context.Context
 	Arguments Arguments
 	ReplyID   int
 	Token     string

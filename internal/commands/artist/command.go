@@ -50,7 +50,7 @@ func (c artistCommand) Do(ctx command.Context) []messaging.ChatMessage {
 
 	cli, auth := c.interlayer.Discovery.New(ctx.Token)
 
-	reqCtx, cancel := context.WithTimeout(context.Background(), searchTimeout)
+	reqCtx, cancel := context.WithTimeout(ctx.Ctx, searchTimeout)
 	defer cancel()
 
 	req := music.SearchMusicParams{

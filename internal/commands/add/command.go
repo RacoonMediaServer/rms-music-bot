@@ -66,7 +66,7 @@ func (c addCommand) Do(ctx command.Context) []messaging.ChatMessage {
 
 	cli, auth := c.interlayer.Discovery.New(ctx.Token)
 
-	variants, err := c.searchTorrents(cli, auth, q, allAlbums)
+	variants, err := c.searchTorrents(ctx.Ctx, cli, auth, q, allAlbums)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Search torrents failed: %s", err)
 		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
@@ -84,7 +84,7 @@ func (c addCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	}
 	chosen := sel.Select(variants)
 
-	torrentFile, err := c.getTorrentFile(cli, auth, *chosen.Link)
+	torrentFile, err := c.getTorrentFile(ctx.Ctx, cli, auth, *chosen.Link)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Get torrent file failed: %s", err)
 		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
@@ -115,8 +115,8 @@ func (c addCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	return messaging.NewSingleMessage("Добавлено", ctx.ReplyID)
 }
 
-func (c addCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthInfoWriter, q string, allAlbums bool) ([]*models.SearchTorrentsResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
+func (c addCommand) searchTorrents(parentCtx context.Context, cli *client.Client, auth runtime.ClientAuthInfoWriter, q string, allAlbums bool) ([]*models.SearchTorrentsResult, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, searchTimeout)
 	defer cancel()
 
 	req := torrents.SearchTorrentsParams{
@@ -135,8 +135,8 @@ func (c addCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthIn
 	return resp.Payload.Results, nil
 }
 
-func (c addCommand) getTorrentFile(cli *client.Client, auth runtime.ClientAuthInfoWriter, link string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
+func (c addCommand) getTorrentFile(parentCtx context.Context, cli *client.Client, auth runtime.ClientAuthInfoWriter, link string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, searchTimeout)
 	defer cancel()
 
 	downloadReq := torrents.DownloadTorrentParams{

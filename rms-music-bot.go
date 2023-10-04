@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/access"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/bot"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/chatting"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/db"
@@ -10,7 +12,6 @@ import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/health"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/provider"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/registry"
-	"github.com/RacoonMediaServer/rms-music-bot/internal/service"
 	"github.com/urfave/cli/v2"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/logger"
@@ -70,8 +71,9 @@ func main() {
 	interlayer.Registry = registry.New()
 	interlayer.ContentManager = database
 	interlayer.ContentProvider = provider.NewContentProvider(conf.Layout.Directory)
+	interlayer.AccessService = access.New(interlayer.Services, conf)
 
-	tgBot, err := bot.New(conf.Bot.Token, service.New(interlayer))
+	tgBot, err := bot.New(conf.Bot.Token)
 	if err != nil {
 		logger.Fatalf("Start bot failed: %s", err)
 	}
@@ -81,12 +83,17 @@ func main() {
 	}
 
 	chk := health.NewChecker(conf)
+	manager := chatting.NewManager(tgBot, interlayer)
+	manager.Start()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	<-c
 
+	logger.Info("Shutdown...")
+
 	chk.Stop()
+	manager.Stop()
 	tgBot.Stop()
 	dw.Stop()
 }

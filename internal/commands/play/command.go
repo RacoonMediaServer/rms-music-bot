@@ -63,7 +63,7 @@ func (c playCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	}
 	directory, err := c.findExistingDirectory(args)
 	if err != nil {
-		directory, err = c.download(args, model.Discography, ctx.Token)
+		directory, err = c.download(ctx.Ctx, args, model.Discography, ctx.Token)
 		if err != nil {
 			if errors.Is(err, errNotFound) {
 				return messaging.NewSingleMessage(command.NothingFound, ctx.ReplyID)
@@ -76,8 +76,8 @@ func (c playCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	return c.play(args, directory, ctx.ReplyID)
 }
 
-func (c playCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthInfoWriter, q string) ([]*models.SearchTorrentsResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
+func (c playCommand) searchTorrents(parentCtx context.Context, cli *client.Client, auth runtime.ClientAuthInfoWriter, q string) ([]*models.SearchTorrentsResult, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, searchTimeout)
 	defer cancel()
 
 	req := torrents.SearchTorrentsParams{
@@ -96,8 +96,8 @@ func (c playCommand) searchTorrents(cli *client.Client, auth runtime.ClientAuthI
 	return resp.Payload.Results, nil
 }
 
-func (c playCommand) getTorrentFile(cli *client.Client, auth runtime.ClientAuthInfoWriter, link string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
+func (c playCommand) getTorrentFile(parentCtx context.Context, cli *client.Client, auth runtime.ClientAuthInfoWriter, link string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, searchTimeout)
 	defer cancel()
 
 	downloadReq := torrents.DownloadTorrentParams{
@@ -114,7 +114,7 @@ func (c playCommand) getTorrentFile(cli *client.Client, auth runtime.ClientAuthI
 	return buf.Bytes(), nil
 }
 
-func (c playCommand) download(args *command.DownloadArguments, contentType model.ContentType, token string) (string, error) {
+func (c playCommand) download(parentCtx context.Context, args *command.DownloadArguments, contentType model.ContentType, token string) (string, error) {
 	cli, auth := c.interlayer.Discovery.New(token)
 	var variants []*models.SearchTorrentsResult
 	var err error
@@ -124,7 +124,7 @@ func (c playCommand) download(args *command.DownloadArguments, contentType model
 		title = args.Album
 	}
 
-	variants, err = c.searchTorrents(cli, auth, title)
+	variants, err = c.searchTorrents(parentCtx, cli, auth, title)
 	if err != nil {
 		return "", fmt.Errorf("search torrents failed: %w", err)
 	}
@@ -144,7 +144,7 @@ func (c playCommand) download(args *command.DownloadArguments, contentType model
 		return "", errNotFound
 	}
 
-	torrentFile, err := c.getTorrentFile(cli, auth, *chosen.Link)
+	torrentFile, err := c.getTorrentFile(parentCtx, cli, auth, *chosen.Link)
 	if err != nil {
 		return "", fmt.Errorf("get torrent file failed: %w", err)
 	}

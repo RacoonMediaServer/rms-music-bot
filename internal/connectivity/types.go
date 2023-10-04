@@ -16,6 +16,7 @@ type Interlayer struct {
 	Registry        registry.Registry
 	ContentManager  ContentManager
 	ContentProvider provider.ContentProvider
+	AccessService   AccessService
 }
 
 type TorrentManager interface {
@@ -30,4 +31,8 @@ type ContentManager interface {
 
 type DiscoveryServiceFactory interface {
 	New(token string) (*client.Client, runtime.ClientAuthInfoWriter)
+}
+
+type AccessService interface {
+	CheckAccess(telegramUserId int) (ok bool, token string, err error)
 }

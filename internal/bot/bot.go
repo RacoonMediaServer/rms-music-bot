@@ -1,7 +1,9 @@
 package bot
 
 import (
+	"context"
 	"fmt"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"go-micro.dev/v4/logger"
 	"sync"
@@ -9,22 +11,32 @@ import (
 
 type Bot struct {
 	l   logger.Logger
-	wg  sync.WaitGroup
 	api *tgbotapi.BotAPI
-	h   MessageHandler
+	wg  sync.WaitGroup
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	incoming chan *messaging.Incoming
+	outgoing chan *messaging.Outgoing
 }
 
-func New(token string, handler MessageHandler) (*Bot, error) {
+const maxMessages = 10000
+
+func New(token string) (*Bot, error) {
 	var err error
 	bot := &Bot{
-		l: logger.DefaultLogger.Fields(map[string]interface{}{"from": "bot"}),
-		h: handler,
+		l:        logger.DefaultLogger.Fields(map[string]interface{}{"from": "bot"}),
+		incoming: make(chan *messaging.Incoming, maxMessages),
+		outgoing: make(chan *messaging.Outgoing, maxMessages),
 	}
 
 	bot.api, err = tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, err
 	}
+
+	bot.ctx, bot.cancel = context.WithCancel(context.Background())
 
 	bot.wg.Add(1)
 	go func() {
@@ -33,6 +45,14 @@ func New(token string, handler MessageHandler) (*Bot, error) {
 	}()
 
 	return bot, nil
+}
+
+func (bot *Bot) Incoming() <-chan *messaging.Incoming {
+	return bot.incoming
+}
+
+func (bot *Bot) Outgoing() chan<- *messaging.Outgoing {
+	return bot.outgoing
 }
 
 func (bot *Bot) loop() {
@@ -65,24 +85,29 @@ func (bot *Bot) loop() {
 				continue
 			}
 
-			bot.l.Logf(logger.InfoLevel, "Got message: '%s' from @%s", message.Text, message.From.UserName)
-			bot.wg.Add(1)
-			go bot.handleMessage(message)
-		}
-	}
-}
+			msg := messaging.Incoming{
+				ID:       message.MessageID,
+				ChatID:   message.Chat.ID,
+				UserID:   message.From.ID,
+				UserName: message.From.UserName,
+				Text:     message.Text,
+			}
+			bot.incoming <- &msg
 
-func (bot *Bot) handleMessage(message *tgbotapi.Message) {
-	defer bot.wg.Done()
-	responses := bot.h.HandleMessage(message.MessageID, message.From.ID, message.From.UserName, message.Text)
-	for _, response := range responses {
-		msg := response.Compose(message.Chat.ID)
-		if _, err := bot.api.Send(msg); err != nil {
-			bot.l.Logf(logger.ErrorLevel, "Send message to %s failed: %s", message.From.UserName, err)
+		case message := <-bot.outgoing:
+			if _, err = bot.api.Send(message.Message.Compose(message.ChatID)); err != nil {
+				bot.l.Logf(logger.ErrorLevel, "Send message failed: %s")
+			}
+		case <-bot.ctx.Done():
+			return
 		}
 	}
 }
 
 func (bot *Bot) Stop() {
+	bot.cancel()
+	bot.wg.Wait()
 
+	close(bot.incoming)
+	close(bot.outgoing)
 }
