@@ -12,8 +12,8 @@ import (
 type accessState int
 
 const (
-	accessGranted accessState = iota
-	accessNone
+	accessNone accessState = iota
+	accessGranted
 	accessDenied
 	accessRequested
 )

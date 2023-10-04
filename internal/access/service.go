@@ -43,6 +43,9 @@ func (s Service) CheckAccess(telegramUserId int) (ok bool, token string, err err
 			break
 		}
 	}
-	token = *resp.Token
+
+	if resp.Token != nil {
+		token = *resp.Token
+	}
 	return
 }
