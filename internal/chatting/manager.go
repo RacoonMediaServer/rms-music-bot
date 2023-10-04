@@ -23,6 +23,37 @@ type Manager struct {
 	chats map[int]*userChat
 }
 
+func (m *Manager) SendTo(userID int, message messaging.ChatMessage) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	chat, ok := m.chats[userID]
+	if !ok {
+		return false
+	}
+
+	m.messenger.Outgoing() <- &messaging.Outgoing{ChatID: chat.chatID, Message: message}
+	return true
+}
+
+func (m *Manager) RequestAccess(userID int) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	chat, ok := m.chats[userID]
+	if !ok {
+		return false
+	}
+
+	chat.mu.Lock()
+	defer chat.mu.Unlock()
+	if chat.state != stateAccessGranted && chat.state != stateAccessDenied {
+		chat.state = stateAccessRequested
+		return true
+	}
+	return false
+}
+
 func NewManager(messenger Messenger, interlayer connectivity.Interlayer) *Manager {
 	m := &Manager{
 		messenger:  messenger,
@@ -102,6 +133,7 @@ func (m *Manager) processIncomingMessage(msg *messaging.Incoming) {
 		Token:     chat.getToken(),
 		UserName:  msg.UserName,
 		UserID:    msg.UserID,
+		Chatting:  m,
 	}
 	m.reply(msg, cmd.Do(commandCtx))
 }

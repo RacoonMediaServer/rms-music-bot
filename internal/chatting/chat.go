@@ -34,7 +34,7 @@ func (c *userChat) requestState() (chatState, error) {
 			c.token = token
 			c.state = stateAccessGranted
 			c.checkAccessTime = time.Now()
-		} else {
+		} else if c.state == stateAccessGranted {
 			// TODO: как навсегда забанить пользователя ?
 			c.state = stateNoAccess
 		}
