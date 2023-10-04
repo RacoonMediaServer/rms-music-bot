@@ -20,11 +20,14 @@ type Remote struct {
 }
 
 type HealthCheck struct {
-	Enabled  bool
+	Enabled bool
+	Fifo    string
+}
+
+type Service struct {
 	Server   string
 	Username string
 	Password string
-	Fifo     string
 }
 
 // Configuration represents entire service configuration
@@ -33,8 +36,9 @@ type Configuration struct {
 	Bot         Bot
 	Layout      Layout
 	Remote      Remote
-	Token       string // TODO: remove
+	Service     Service
 	HealthCheck HealthCheck
+	Token       string // TODO: remove
 }
 
 var config Configuration

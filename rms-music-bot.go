@@ -80,7 +80,7 @@ func main() {
 		logger.Fatalf("Start downloader failed: %s", err)
 	}
 
-	chk := health.NewChecker(conf.HealthCheck)
+	chk := health.NewChecker(conf)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)

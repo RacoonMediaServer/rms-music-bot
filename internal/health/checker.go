@@ -23,20 +23,22 @@ const (
 var errDownloadIsHung = errors.New("download is hung")
 
 type Checker struct {
-	config config.HealthCheck
-	wg     sync.WaitGroup
-	l      logger.Logger
-	ctx    context.Context
-	cancel context.CancelFunc
+	healthCheckConfig config.HealthCheck
+	serviceConfig     config.Service
+	wg                sync.WaitGroup
+	l                 logger.Logger
+	ctx               context.Context
+	cancel            context.CancelFunc
 }
 
-func NewChecker(config config.HealthCheck) *Checker {
+func NewChecker(conf config.Configuration) *Checker {
 	chk := Checker{
-		config: config,
-		l:      logger.Fields(map[string]interface{}{"from": "healthcheck"}),
+		healthCheckConfig: conf.HealthCheck,
+		serviceConfig:     conf.Service,
+		l:                 logger.Fields(map[string]interface{}{"from": "healthcheck"}),
 	}
 	chk.ctx, chk.cancel = context.WithCancel(context.Background())
-	if config.Enabled {
+	if conf.HealthCheck.Enabled {
 		chk.startAsyncCheck()
 	}
 	return &chk
@@ -81,14 +83,15 @@ func (c *Checker) startSyncCheck() {
 func (c *Checker) check() error {
 	cli := subsonic.Client{
 		Client:       &http.Client{Timeout: downloadTimeout},
-		BaseUrl:      c.config.Server,
-		User:         c.config.Username,
+		BaseUrl:      c.serviceConfig.Server,
+		User:         c.serviceConfig.Username,
 		ClientName:   "music-bot",
 		PasswordAuth: true,
 	}
-	if err := cli.Authenticate(c.config.Password); err != nil {
+	if err := cli.Authenticate(c.serviceConfig.Password); err != nil {
 		return fmt.Errorf("auth failed: %w", err)
 	}
+
 	albums, err := cli.GetAlbumList("random", map[string]string{"size": "1"})
 	if err != nil {
 		return fmt.Errorf("get random album failed: %w", err)
@@ -119,7 +122,7 @@ func (c *Checker) check() error {
 }
 
 func (c *Checker) notifyFifo() {
-	f, err := os.OpenFile(c.config.Fifo, os.O_WRONLY, os.ModeNamedPipe)
+	f, err := os.OpenFile(c.healthCheckConfig.Fifo, os.O_WRONLY, os.ModeNamedPipe)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Open Fifo failed: %s", err)
 		return
