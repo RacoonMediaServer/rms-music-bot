@@ -8,6 +8,8 @@ type Attributes struct {
 	CanRepeat bool
 	// AuthRequired - need user credentials for run command
 	AuthRequired bool
+	// AdminRequired - flag admin rights is required to command
+	AdminRequired bool
 }
 
 // Type describes commands of specific types

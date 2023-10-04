@@ -3,9 +3,12 @@ package commands
 import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/commands/add"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/commands/approve"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/commands/artist"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/commands/decline"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/commands/listen"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/commands/play"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/commands/request"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/commands/search"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"go-micro.dev/v4/logger"
@@ -23,6 +26,9 @@ func init() {
 	commandMap[listen.Command.ID] = listen.Command
 	commandMap[play.Command.ID] = play.Command
 	commandMap[search.Command.ID] = search.Command
+	commandMap[request.Command.ID] = request.Command
+	commandMap[approve.Command.ID] = approve.Command
+	commandMap[decline.Command.ID] = decline.Command
 }
 
 func NewCommand(commandID string, interlayer connectivity.Interlayer, l logger.Logger) (command.Command, command.Attributes, bool) {
