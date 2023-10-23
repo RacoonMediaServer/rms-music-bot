@@ -42,7 +42,7 @@ func (c approveCommand) Do(ctx command.Context) []messaging.ChatMessage {
 		return messaging.NewSingleMessage("Заявка не найдена, либо просрочена", ctx.ReplyID)
 	}
 
-	userID := int32(ctx.UserID)
+	userID := int32(req.UserID)
 	user := &rms_users.User{
 		Name:           req.UserName,
 		TelegramUserID: &userID,
@@ -55,6 +55,7 @@ func (c approveCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	_, err := c.interlayer.Services.NewUsers().RegisterUser(ctx.Ctx, user)
 	if err != nil {
 		c.l.Logf(logger.ErrorLevel, "Register user failed: %s", err)
+		return messaging.NewSingleMessage("Не удалось зарегистрировать нового пользователя", ctx.ReplyID)
 	}
 
 	ctx.Chatting.SendTo(req.UserID, messaging.New("Заявка на доступ к боту одобрена! Для справки по командам можно использовать /help.", 0))
