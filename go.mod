@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/RacoonMediaServer/distribyted v1.0.6
 	github.com/RacoonMediaServer/rms-media-discovery v1.5.7
-	github.com/RacoonMediaServer/rms-packages v1.10.2
+	github.com/RacoonMediaServer/rms-packages v1.10.3
 	github.com/anacrolix/missinggo/v2 v2.7.2
 	github.com/anacrolix/torrent v1.52.6-0.20230905090324-873da77cca69
 	github.com/antzucaro/matchr v0.0.0-20221106193745-7bed6ef61ef9

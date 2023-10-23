@@ -92,6 +92,7 @@ func (bot *Bot) loop() {
 				UserName: message.From.UserName,
 				Text:     message.Text,
 			}
+			bot.l.Logf(logger.DebugLevel, "Message '%s' from @%s [ %d ]", message.Text, message.From.UserName, message.From.ID)
 			bot.incoming <- &msg
 
 		case message := <-bot.outgoing:

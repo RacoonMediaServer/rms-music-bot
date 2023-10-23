@@ -50,7 +50,22 @@ func (c requestCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	msg.SetKeyboardStyle(messaging.MessageKeyboard)
 	msg.AddButton("Принять", "/approve "+reqId)
 	msg.AddButton("Отклонить", "/decline "+reqId)
-	if !ctx.Chatting.SendTo(ctx.UserID, msg) {
+
+	adminUsers, err := c.interlayer.AccessService.GetAdminUserId()
+	if err != nil {
+		c.l.Logf(logger.WarnLevel, "Cannot send request to admin user: %s", err)
+		return messaging.NewSingleMessage(command.SomethingWentWrong, ctx.ReplyID)
+	}
+
+	requestSent := false
+	for _, adminUserId := range adminUsers {
+		requestSent = ctx.Chatting.SendTo(adminUserId, msg)
+		if requestSent {
+			break
+		}
+	}
+
+	if !requestSent {
 		return messaging.NewSingleMessage("Возникли проблемы с запросом заявки. Стоит попробовать позже", ctx.ReplyID)
 	}
 

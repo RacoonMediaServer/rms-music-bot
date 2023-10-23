@@ -35,4 +35,5 @@ type DiscoveryServiceFactory interface {
 
 type AccessService interface {
 	CheckAccess(telegramUserId int) (ok bool, token string, err error)
+	GetAdminUserId() ([]int, error)
 }

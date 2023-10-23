@@ -2,10 +2,13 @@ package access
 
 import (
 	"context"
+	"errors"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	rms_users "github.com/RacoonMediaServer/rms-packages/pkg/service/rms-users"
 	"github.com/RacoonMediaServer/rms-packages/pkg/service/servicemgr"
+	"github.com/golang/protobuf/ptypes/empty"
 	"go-micro.dev/v4/client"
+	"math/rand"
 	"time"
 )
 
@@ -48,4 +51,28 @@ func (s Service) CheckAccess(telegramUserId int) (ok bool, token string, err err
 		token = *resp.Token
 	}
 	return
+}
+
+func (s Service) GetAdminUserId() ([]int, error) {
+	users, err := s.f.NewUsers().GetAdminUsers(context.TODO(), &empty.Empty{}, client.WithRequestTimeout(usersRequestTimeout))
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]int, 0, len(users.Users))
+	for _, u := range users.Users {
+		if u.TelegramUserID != nil {
+			result = append(result, int(*u.TelegramUserID))
+		}
+	}
+
+	rand.Shuffle(len(result), func(i, j int) {
+		result[i], result[j] = result[j], result[i]
+	})
+
+	if len(result) == 0 {
+		return nil, errors.New("no any admin user found")
+	}
+
+	return result, nil
 }
