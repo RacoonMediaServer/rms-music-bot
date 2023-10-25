@@ -45,8 +45,8 @@ func (c requestCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	}
 	reqId := c.interlayer.Registry.Add(&req, requestTTL)
 
-	text := fmt.Sprintf("Заявка на доступ к боту от нового пользователя:\n\nИмя: <b>%s</b>\nИдентификатор: <b>%d</b>\n",
-		ctx.Chat.UserName, ctx.Chat.UserID)
+	text := fmt.Sprintf("Заявка на доступ к боту от нового пользователя:\n\nИмя: <b>%s</b>\nИдентификатор: <b>%d</b>\nПароль: <b>%s</b>\n",
+		ctx.Chat.UserName, ctx.Chat.UserID, ctx.Chat.Password)
 	msg := messaging.New(text, 0)
 	msg.SetKeyboardStyle(messaging.MessageKeyboard)
 	msg.AddButton("Принять", "/approve "+reqId)

@@ -61,10 +61,11 @@ func (c approveCommand) Do(ctx command.Context) []messaging.ChatMessage {
 		return messaging.NewSingleMessage("Не удалось зарегистрировать нового пользователя", ctx.ReplyID)
 	}
 
-	if err = c.registerServiceUser(req); err != nil {
-		c.l.Logf(logger.ErrorLevel, "Register user to music service failed: %s", err)
-		return messaging.NewSingleMessage("Возникла ошибка регистрации пользователя на стримере", ctx.ReplyID)
-	}
+	// TODO: Раскомментировать, когда можно будет создавать пользователей в Navidrome
+	//if err = c.registerServiceUser(req); err != nil {
+	//	c.l.Logf(logger.ErrorLevel, "Register user to music service failed: %s", err)
+	//	return messaging.NewSingleMessage("Возникла ошибка регистрации пользователя на стримере", ctx.ReplyID)
+	//}
 
 	ctx.Chatting.SendTo(req.UserID, messaging.New("Заявка на доступ к боту одобрена!", 0))
 	ctx.Chatting.TriggerCommand(req.UserID, "help", command.Arguments{})
