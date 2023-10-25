@@ -17,8 +17,8 @@ func (m *Manager) replyRequestIsRequired(msg *messaging.Incoming) {
 	m.messenger.Outgoing() <- &messaging.Outgoing{ChatID: msg.ChatID, Message: reply}
 }
 
-func (m *Manager) reply(msg *messaging.Incoming, replies []messaging.ChatMessage) {
+func (m *Manager) reply(chatID int64, replies []messaging.ChatMessage) {
 	for i := range replies {
-		m.messenger.Outgoing() <- &messaging.Outgoing{ChatID: msg.ChatID, Message: replies[i]}
+		m.messenger.Outgoing() <- &messaging.Outgoing{ChatID: chatID, Message: replies[i]}
 	}
 }

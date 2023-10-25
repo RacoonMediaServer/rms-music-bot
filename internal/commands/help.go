@@ -3,7 +3,9 @@ package commands
 import (
 	"fmt"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/formatter"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
 	"go-micro.dev/v4/logger"
 	"sort"
@@ -41,20 +43,23 @@ func (h helpCommand) Do(ctx command.Context) []messaging.ChatMessage {
 	sort.Slice(titles, func(i, j int) bool {
 		return titles[i] < titles[j]
 	})
-	result := `Данный бот предназначен для прослушивания музыки без цензуры, <strike>регистрации и СМС</strike>. Дискография исполнителей добавляется с помощью нижеперечисленных команд, музыку же можно воспроизвести через Telegram, с телефона или <a href="https://music.racoondev.top/">веб-сайта</a>. Для прослушивания музыки с телефона - необходимо установить приложение <a href="https://play.google.com/store/apps/details?id=com.ghenry22.substream2">substreamer</a>.`
-	result += "\n\nServer: https://music.racoondev.top/\n"
-	result += "Username: <b>demo</b>\n"
-	result += "Password: <b>demo</b>\n\n"
 
+	helpText := ""
 	for _, t := range titles {
 		cmd := commandMap[t]
 		if !cmd.Attributes.Internal {
-			result += fmt.Sprintf("/%s %s - %s\n", cmd.ID, cmd.Title, cmd.Help)
+			helpText += fmt.Sprintf("/%s %s - %s\n", cmd.ID, cmd.Title, cmd.Help)
 		}
 	}
 
-	result += "\nВесь функционал на данный момент является <b>демо-версией</b>."
-	return messaging.NewSingleMessage(result, ctx.ReplyID)
+	helpCtx := formatter.HelpContext{
+		Link:     config.Config().Service.Server,
+		UserName: ctx.Chat.UserName,
+		Password: ctx.Chat.Password,
+		Text:     helpText,
+	}
+
+	return []messaging.ChatMessage{formatter.FormatHelp(helpCtx, ctx.ReplyID)}
 }
 
 func newHelpCommand(interlayer connectivity.Interlayer, l logger.Logger) command.Command {

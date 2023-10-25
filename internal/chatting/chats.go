@@ -13,7 +13,7 @@ func (m *Manager) getOrCreateChat(msg *messaging.Incoming) *userChat {
 
 	if !ok {
 		chat = m.createChat(msg)
-		if err := m.interlayer.ChatStorage.SaveChat(&model.Chat{ChatID: msg.ChatID, UserID: msg.UserID}); err != nil {
+		if err := m.interlayer.ChatStorage.SaveChat(chat.record); err != nil {
 			logger.Errorf("Save chat record failed: %s", err)
 		}
 	}
@@ -26,7 +26,7 @@ func (m *Manager) createChat(msg *messaging.Incoming) *userChat {
 
 	chat, ok := m.chats[msg.UserID]
 	if !ok {
-		chat = newUserChat(m.interlayer, msg.ChatID, msg.UserID)
+		chat = newUserChat(m.interlayer, model.NewChat(msg.UserID, msg.ChatID, msg.UserName))
 		m.chats[msg.UserID] = chat
 	}
 	return chat

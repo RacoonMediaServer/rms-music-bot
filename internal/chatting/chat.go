@@ -2,6 +2,7 @@ package chatting
 
 import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/model"
 	"sync"
 	"time"
 )
@@ -16,16 +17,14 @@ type userChat struct {
 	checkAccessTime time.Time
 	prevCommand     string
 
-	chatID int64
-	userID int
+	record *model.Chat
 	token  string
 }
 
-func newUserChat(interlayer connectivity.Interlayer, chatID int64, userID int) *userChat {
+func newUserChat(interlayer connectivity.Interlayer, chatRecord *model.Chat) *userChat {
 	return &userChat{
 		accessService: interlayer.AccessService,
-		chatID:        chatID,
-		userID:        userID,
+		record:        chatRecord,
 		prevCommand:   "search",
 	}
 }
@@ -35,7 +34,7 @@ func (c *userChat) requestState() (chatState, error) {
 	defer c.mu.Unlock()
 
 	if c.state != stateAccessGranted || time.Since(c.checkAccessTime) > resetStateInterval {
-		granted, token, err := c.accessService.CheckAccess(c.userID)
+		granted, token, err := c.accessService.CheckAccess(c.record.UserID)
 		if err != nil {
 			return c.state, err
 		}

@@ -2,11 +2,14 @@ package approve
 
 import (
 	"github.com/RacoonMediaServer/rms-music-bot/internal/command"
+	"github.com/RacoonMediaServer/rms-music-bot/internal/config"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/connectivity"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/messaging"
 	"github.com/RacoonMediaServer/rms-music-bot/internal/registry"
 	rms_users "github.com/RacoonMediaServer/rms-packages/pkg/service/rms-users"
+	"github.com/delucks/go-subsonic"
 	"go-micro.dev/v4/logger"
+	"net/http"
 )
 
 type approveCommand struct {
@@ -58,8 +61,29 @@ func (c approveCommand) Do(ctx command.Context) []messaging.ChatMessage {
 		return messaging.NewSingleMessage("Не удалось зарегистрировать нового пользователя", ctx.ReplyID)
 	}
 
-	ctx.Chatting.SendTo(req.UserID, messaging.New("Заявка на доступ к боту одобрена! Для справки по командам можно использовать /help.", 0))
+	if err = c.registerServiceUser(req); err != nil {
+		c.l.Logf(logger.ErrorLevel, "Register user to music service failed: %s", err)
+		return messaging.NewSingleMessage("Возникла ошибка регистрации пользователя на стримере", ctx.ReplyID)
+	}
 
-	//TODO: register service user
+	ctx.Chatting.SendTo(req.UserID, messaging.New("Заявка на доступ к боту одобрена!", 0))
+	ctx.Chatting.TriggerCommand(req.UserID, "help", command.Arguments{})
+
 	return messaging.NewSingleMessage("Заявка одобрена", ctx.ReplyID)
+}
+
+func (c approveCommand) registerServiceUser(req *command.Request) error {
+	conf := config.Config().Service
+	cli := subsonic.Client{
+		Client:       &http.Client{},
+		BaseUrl:      conf.Server,
+		User:         conf.Username,
+		ClientName:   "music-bot",
+		PasswordAuth: true,
+	}
+	if err := cli.Authenticate(conf.Password); err != nil {
+		return err
+	}
+
+	return cli.CreateUser(req.UserName, req.Password, "", map[string]string{})
 }

@@ -1,0 +1,9 @@
+{{ define "help" }}
+Данный бот предназначен для прослушивания музыки без цензуры, <strike>регистрации и СМС</strike>. Дискография исполнителей добавляется с помощью нижеперечисленных команд, музыку же можно воспроизвести через Telegram, с телефона или <a href="{{ $.Link }}">веб-сайта</a>. Для прослушивания музыки с телефона - необходимо установить приложение <a href="https://play.google.com/store/apps/details?id=com.ghenry22.substream2">substreamer</a>.
+
+Server: {{ $.Link }}
+Username: <b>{{ $.UserName }}</b>
+Password: <b>{{ $.Password }}</b>
+
+{{ $.Text }}
+{{ end }}

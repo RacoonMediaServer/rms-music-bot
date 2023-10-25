@@ -34,18 +34,19 @@ func New(interlayer connectivity.Interlayer, l logger.Logger) command.Command {
 }
 
 func (c requestCommand) Do(ctx command.Context) []messaging.ChatMessage {
-	if !ctx.Chatting.RequestAccess(ctx.UserID) {
+	if !ctx.Chatting.RequestAccess(ctx.Chat.UserID) {
 		return messaging.NewSingleMessage("Не удалось отправить заявку", ctx.ReplyID)
 	}
 
 	req := command.Request{
-		UserID:   ctx.UserID,
-		UserName: ctx.UserName,
+		UserID:   ctx.Chat.UserID,
+		UserName: ctx.Chat.UserName,
+		Password: ctx.Chat.Password,
 	}
 	reqId := c.interlayer.Registry.Add(&req, requestTTL)
 
 	text := fmt.Sprintf("Заявка на доступ к боту от нового пользователя:\n\nИмя: <b>%s</b>\nИдентификатор: <b>%d</b>\n",
-		ctx.UserName, ctx.UserID)
+		ctx.Chat.UserName, ctx.Chat.UserID)
 	msg := messaging.New(text, 0)
 	msg.SetKeyboardStyle(messaging.MessageKeyboard)
 	msg.AddButton("Принять", "/approve "+reqId)

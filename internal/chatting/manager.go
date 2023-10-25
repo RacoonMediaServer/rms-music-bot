@@ -23,6 +23,32 @@ type Manager struct {
 	chats map[int]*userChat
 }
 
+func (m *Manager) TriggerCommand(userID int, commandID string, args command.Arguments) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	chat, ok := m.chats[userID]
+	if !ok {
+		return false
+	}
+
+	cmd, _, ok := commands.NewCommand(commandID, m.interlayer, logger.DefaultLogger)
+	if !ok {
+		return false
+	}
+
+	commandCtx := command.Context{
+		Ctx:       m.ctx,
+		Arguments: args,
+		ReplyID:   0,
+		Token:     chat.getToken(),
+		Chat:      *chat.record,
+		Chatting:  m,
+	}
+	m.reply(chat.record.ChatID, cmd.Do(commandCtx))
+	return true
+}
+
 func (m *Manager) SendTo(userID int, message messaging.ChatMessage) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -32,7 +58,7 @@ func (m *Manager) SendTo(userID int, message messaging.ChatMessage) bool {
 		return false
 	}
 
-	m.messenger.Outgoing() <- &messaging.Outgoing{ChatID: chat.chatID, Message: message}
+	m.messenger.Outgoing() <- &messaging.Outgoing{ChatID: chat.record.ChatID, Message: message}
 	return true
 }
 
@@ -62,7 +88,7 @@ func NewManager(messenger Messenger, interlayer connectivity.Interlayer) *Manage
 	}
 	if chats, err := interlayer.ChatStorage.LoadChats(); err == nil {
 		for _, chatRecord := range chats {
-			m.chats[chatRecord.UserID] = newUserChat(interlayer, chatRecord.ChatID, chatRecord.UserID)
+			m.chats[chatRecord.UserID] = newUserChat(interlayer, chatRecord)
 		}
 	} else {
 		logger.Errorf("Load stored chats failed: %s", err)
@@ -139,11 +165,10 @@ func (m *Manager) processIncomingMessage(msg *messaging.Incoming) {
 		Arguments: commandArgs,
 		ReplyID:   msg.ID,
 		Token:     chat.getToken(),
-		UserName:  msg.UserName,
-		UserID:    msg.UserID,
+		Chat:      *chat.record,
 		Chatting:  m,
 	}
-	m.reply(msg, cmd.Do(commandCtx))
+	m.reply(msg.ChatID, cmd.Do(commandCtx))
 }
 
 func (m *Manager) Stop() {
