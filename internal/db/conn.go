@@ -16,7 +16,7 @@ func Connect(config configuration.Database) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = db.AutoMigrate(&model.Artist{}, &model.Content{}, &model.Torrent{}); err != nil {
+	if err = db.AutoMigrate(&model.Artist{}, &model.Content{}, &model.Torrent{}, &model.Chat{}); err != nil {
 		return nil, err
 	}
 	//db.Migrator().CreateConstraint(&model.Artist{}, "Content")

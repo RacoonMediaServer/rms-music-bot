@@ -72,6 +72,7 @@ func main() {
 	interlayer.ContentManager = database
 	interlayer.ContentProvider = provider.NewContentProvider(conf.Layout.Directory)
 	interlayer.AccessService = access.New(interlayer.Services, conf)
+	interlayer.ChatStorage = database
 
 	tgBot, err := bot.New(conf.Bot.Token)
 	if err != nil {

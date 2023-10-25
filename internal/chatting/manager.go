@@ -60,6 +60,14 @@ func NewManager(messenger Messenger, interlayer connectivity.Interlayer) *Manage
 		interlayer: interlayer,
 		chats:      map[int]*userChat{},
 	}
+	if chats, err := interlayer.ChatStorage.LoadChats(); err == nil {
+		for _, chatRecord := range chats {
+			m.chats[chatRecord.UserID] = newUserChat(interlayer, chatRecord.ChatID, chatRecord.UserID)
+		}
+	} else {
+		logger.Errorf("Load stored chats failed: %s", err)
+	}
+
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	return m
 }

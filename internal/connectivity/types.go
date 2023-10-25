@@ -17,6 +17,7 @@ type Interlayer struct {
 	ContentManager  ContentManager
 	ContentProvider provider.ContentProvider
 	AccessService   AccessService
+	ChatStorage     ChatStorage
 }
 
 type TorrentManager interface {
@@ -36,4 +37,9 @@ type DiscoveryServiceFactory interface {
 type AccessService interface {
 	CheckAccess(telegramUserId int) (ok bool, token string, err error)
 	GetAdminUserId() ([]int, error)
+}
+
+type ChatStorage interface {
+	LoadChats() (result []*model.Chat, err error)
+	SaveChat(chat *model.Chat) error
 }

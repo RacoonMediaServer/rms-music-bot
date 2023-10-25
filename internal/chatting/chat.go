@@ -21,6 +21,15 @@ type userChat struct {
 	token  string
 }
 
+func newUserChat(interlayer connectivity.Interlayer, chatID int64, userID int) *userChat {
+	return &userChat{
+		accessService: interlayer.AccessService,
+		chatID:        chatID,
+		userID:        userID,
+		prevCommand:   "search",
+	}
+}
+
 func (c *userChat) requestState() (chatState, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
